@@ -59,7 +59,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var t = 0.0;
     var force_acc = 0.0;
     
-    for (var i = 0; i < 64; i = i + 1) {
+    for (var i = 0; i < 128; i = i + 1) {
         let p = ro + rd * t;
         let res = map(p);
         let d = res.x;
@@ -73,12 +73,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             if (mat > 1.5) {
                 col = vec3<f32>(1.0, 0.5, 0.2);
             }
-            col = col * (1.0 - f32(i)/64.0);
+            col = col * (1.0 - f32(i)/128.0);
             let force_glow = vec3<f32>(0.2, 0.4, 1.0) * force_acc;
             return vec4<f32>(col + force_glow, 1.0);
         }
         t = t + d;
-        if (t > 400.0) {
+        if (t > 1000.0) {
             break;
         }
     }

@@ -170,6 +170,7 @@ impl Renderer {
     }
 
     fn update_shader(&mut self, wgsl: &str) {
+        println!("[Renderer] Updating shader...");
         let new_shader = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Dynamic Shader"),
             source: wgpu::ShaderSource::Wgsl(wgsl.into()),
@@ -177,6 +178,7 @@ impl Renderer {
         
         self.render_pipeline = Self::create_pipeline(&self.device, &self.pipeline_layout, &new_shader, self.config.format);
         self.shader_module = new_shader;
+        println!("[Renderer] Pipeline updated successfully.");
     }
 }
 
@@ -222,20 +224,27 @@ pub async fn run() {
                         let read_task = async {
                             while let Some(msg) = read.next().await {
                                 if let Ok(Message::Text(text)) = msg {
-                                    if let Ok(msg_enum) = serde_json::from_str::<ServerMessage>(&text) {
-                                        match msg_enum {
-                                            ServerMessage::PhysicsState { x, y, z } => {
-                                                if !x.is_empty() {
-                                                    let mut lock = state_clone.lock().unwrap();
-                                                    lock.x = x[0];
-                                                    lock.y = y[0];
-                                                    lock.z = z[0];
+                                    println!("[WS] Received: {}", text);
+                                    match serde_json::from_str::<ServerMessage>(&text) {
+                                        Ok(msg_enum) => {
+                                            match msg_enum {
+                                                ServerMessage::PhysicsState { x, y, z } => {
+                                                    if !x.is_empty() {
+                                                        let mut lock = state_clone.lock().unwrap();
+                                                        lock.x = x[0];
+                                                        lock.y = y[0];
+                                                        lock.z = z[0];
+                                                    }
+                                                }
+                                                ServerMessage::ShaderUpdate { wgsl } => {
+                                                    log_queue_clone.lock().unwrap().push("[WS] shader update received".to_string());
+                                                    println!("[WS] Shader update received, length: {}", wgsl.len());
+                                                    *new_wgsl_clone.lock().unwrap() = Some(wgsl);
                                                 }
                                             }
-                                            ServerMessage::ShaderUpdate { wgsl } => {
-                                                log_queue_clone.lock().unwrap().push("[WS] shader update received".to_string());
-                                                *new_wgsl_clone.lock().unwrap() = Some(wgsl);
-                                            }
+                                        }
+                                        Err(e) => {
+                                            println!("[WS] Deserialization error: {}. Raw text: {}", e, text);
                                         }
                                     }
                                 }

@@ -54,6 +54,12 @@ class TypeInferencer(ExprTransformer):
     def visit_Div(self, expr: Div) -> Expr:
         return self._visit_binary_op(expr, Div)
 
+    def visit_Max(self, expr: Max) -> Expr:
+        return self._visit_binary_op(expr, Max)
+
+    def visit_Min(self, expr: Min) -> Expr:
+        return self._visit_binary_op(expr, Min)
+
     def visit_Pow(self, expr: Pow) -> Expr:
         left = self.visit(expr.left)
         right = self.visit(expr.right)

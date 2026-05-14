@@ -54,6 +54,16 @@ class WGSLExprCompiler(ExprVisitor):
             op="/", left=self.visit(expr.left), right=self.visit(expr.right)
         )
 
+    def visit_Max(self, expr: Max) -> WGSLNode:
+        return WGSLCallExpr(
+            func_name="max", args=[self.visit(expr.left), self.visit(expr.right)]
+        )
+
+    def visit_Min(self, expr: Min) -> WGSLNode:
+        return WGSLCallExpr(
+            func_name="min", args=[self.visit(expr.left), self.visit(expr.right)]
+        )
+
     def visit_Pow(self, expr: Pow) -> WGSLNode:
         return WGSLCallExpr(
             func_name="pow", args=[self.visit(expr.left), self.visit(expr.right)]

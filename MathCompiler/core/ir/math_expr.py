@@ -59,6 +59,14 @@ class Sqrt(UnaryOp):
     pass
 
 @dataclass(frozen=True, kw_only=True)
+class Max(BinaryOp):
+    pass
+
+@dataclass(frozen=True, kw_only=True)
+class Min(BinaryOp):
+    pass
+
+@dataclass(frozen=True, kw_only=True)
 class Vec3(Expr):
     x: Expr
     y: Expr

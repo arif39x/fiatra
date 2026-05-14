@@ -86,7 +86,7 @@ ui.separator();
 
                 ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
                     ui.add(
-                        TextEdit::multiline(&mut self.log.as_str())
+                        TextEdit::multiline(&mut self.log)
                             .font(FontId::monospace(10.0))
                             .text_color(Color32::from_rgb(0, 255, 150))
                             .desired_rows(20)

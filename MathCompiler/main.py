@@ -89,29 +89,29 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {{
     // Use state for camera or object offset
     let ro = vec3<f32>(state.x, state.y, state.z + 100.0);
     let rd = normalize(vec3<f32>(uv.x, uv.y, -1.5));
+var t = 0.0;
+for (var i = 0; i < 256; i = i + 1) {
+    let p = ro + rd * t;
+    let res = map(p);
+    let d = res.x;
 
-    var t = 0.0;
-    for (var i = 0; i < 128; i = i + 1) {{
-        let p = ro + rd * t;
-        let res = map(p);
-        let d = res.x;
+    if (d < 0.001) {
+        let n = calcNormal(p);
+        let lightDir = normalize(vec3<f32>(1.0, 1.0, 1.0));
+        let diff = max(dot(n, lightDir), 0.1);
 
-        if (d < 0.001) {{
-            let n = calcNormal(p);
-            let lightDir = normalize(vec3<f32>(1.0, 1.0, 1.0));
-            let diff = max(dot(n, lightDir), 0.1);
-            
-            var col = vec3<f32>(0.5, 0.7, 1.0) * diff;
-            
-            // Fog / Depth darkening
-            col = col * exp(-0.005 * t);
-            
-            return vec4<f32>(col, 1.0);
-        }}
-        t = t + d;
-        if (t > 500.0) {{
-            break;
-        }}
+        var col = vec3<f32>(0.5, 0.7, 1.0) * diff;
+
+        // Fog / Depth darkening
+        col = col * exp(-0.001 * t);
+
+        return vec4<f32>(col, 1.0);
+    }
+    t = t + d;
+    if (t > 2000.0) {
+        break;
+    }
+}
     }}
 
     // Sky gradient
