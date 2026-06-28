@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 
 use egui::{
-    vec2, Align, CentralPanel, Color32, Context, FontId, Frame, Layout, Margin, RichText,
+    Align, CentralPanel, Color32, Context, FontId, Frame, Layout, Margin, RichText,
     ScrollArea, SidePanel, Stroke, TextEdit, Ui,
 };
 
@@ -132,7 +132,7 @@ impl EditorState {
                             .rounding(6.0)
                             .inner_margin(Margin::same(8.0));
 
-                        let response = frame.show(ui, |ui| {
+                        let inner = frame.show(ui, |ui| {
                             ui.vertical(|ui| {
                                 ui.horizontal(|ui| {
                                     ui.label(
@@ -160,7 +160,8 @@ impl EditorState {
                                         .color(TEXT_MUTED),
                                 );
                             });
-                        }).response;
+                        });
+                        let response = ui.interact(inner.response.rect, ui.next_auto_id(), egui::Sense::click());
 
                         if response.hovered() {
                             ui.output_mut(|o| o.cursor_icon = egui::CursorIcon::PointingHand);
@@ -245,53 +246,53 @@ impl EditorState {
 
                             ui.label(RichText::new("PERFORMANCE").font(FontId::monospace(9.0)).color(TEXT_MUTED));
                             ui.add_space(4.0);
-                            egui::Grid::new("perf_grid")
-                                .num_columns(3)
-                                .spacing(vec2(4.0, 4.0))
-                                .show(ui, |ui| {
-                                    let mini = |ui: &mut Ui, val: &str, label: &str, color: Color32| {
-                                        Frame::none()
-                                            .fill(BG_PANEL)
-                                            .stroke(Stroke::new(0.5, BORDER))
-                                            .rounding(4.0)
-                                            .inner_margin(Margin::symmetric(6.0, 6.0))
-                                            .show(ui, |ui| {
-                                                ui.vertical(|ui| {
-                                                    ui.label(RichText::new(val).font(FontId::monospace(13.0)).color(color));
-                                                    ui.label(RichText::new(label).font(FontId::monospace(8.0)).color(TEXT_MUTED));
-                                                });
+                            ui.horizontal_wrapped(|ui| {
+                                ui.style_mut().spacing.item_spacing.x = 4.0;
+                                let mini = |ui: &mut Ui, val: &str, label: &str, color: Color32| {
+                                    let width = (ui.available_width() - 8.0).max(60.0) / 3.0;
+                                    Frame::none()
+                                        .fill(BG_PANEL)
+                                        .stroke(Stroke::new(0.5, BORDER))
+                                        .rounding(4.0)
+                                        .inner_margin(Margin::symmetric(6.0, 6.0))
+                                        .show(ui, |ui| {
+                                            ui.vertical(|ui| {
+                                                ui.set_min_width(width);
+                                                ui.label(RichText::new(val).font(FontId::monospace(13.0)).color(color));
+                                                ui.label(RichText::new(label).font(FontId::monospace(8.0)).color(TEXT_MUTED));
                                             });
-                                    };
-                                    mini(ui, &format!("{:.0}", self.metrics.fps), "FPS", GREEN);
-                                    mini(ui, &format!("{}ms", self.metrics.compile_time_ms), "compile", TEXT);
-                                    mini(ui, &format!("{}ms", self.metrics.tick_ms), "tick", TEXT);
-                                });
+                                        });
+                                };
+                                mini(ui, &format!("{:.0}", self.metrics.fps), "FPS", GREEN);
+                                mini(ui, &format!("{}ms", self.metrics.compile_time_ms), "compile", TEXT);
+                                mini(ui, &format!("{}ms", self.metrics.tick_ms), "tick", TEXT);
+                            });
 
                             ui.add_space(12.0);
 
                             ui.label(RichText::new("SCENE").font(FontId::monospace(9.0)).color(TEXT_MUTED));
                             ui.add_space(4.0);
-                            egui::Grid::new("scene_grid")
-                                .num_columns(3)
-                                .spacing(vec2(4.0, 4.0))
-                                .show(ui, |ui| {
-                                    let mini = |ui: &mut Ui, val: &str, label: &str, color: Color32| {
-                                        Frame::none()
-                                            .fill(BG_PANEL)
-                                            .stroke(Stroke::new(0.5, BORDER))
-                                            .rounding(4.0)
-                                            .inner_margin(Margin::symmetric(6.0, 6.0))
-                                            .show(ui, |ui| {
-                                                ui.vertical(|ui| {
-                                                    ui.label(RichText::new(val).font(FontId::monospace(13.0)).color(color));
-                                                    ui.label(RichText::new(label).font(FontId::monospace(8.0)).color(TEXT_MUTED));
-                                                });
+                            ui.horizontal_wrapped(|ui| {
+                                ui.style_mut().spacing.item_spacing.x = 4.0;
+                                let mini = |ui: &mut Ui, val: &str, label: &str, color: Color32| {
+                                    let width = (ui.available_width() - 8.0).max(60.0) / 3.0;
+                                    Frame::none()
+                                        .fill(BG_PANEL)
+                                        .stroke(Stroke::new(0.5, BORDER))
+                                        .rounding(4.0)
+                                        .inner_margin(Margin::symmetric(6.0, 6.0))
+                                        .show(ui, |ui| {
+                                            ui.vertical(|ui| {
+                                                ui.set_min_width(width);
+                                                ui.label(RichText::new(val).font(FontId::monospace(13.0)).color(color));
+                                                ui.label(RichText::new(label).font(FontId::monospace(8.0)).color(TEXT_MUTED));
                                             });
-                                    };
-                                    mini(ui, &format!("{}", self.metrics.complexity), "complexity", YELLOW);
-                                    mini(ui, &format!("{}", self.metrics.march_steps), "steps", TEXT);
-                                    mini(ui, &format!("{}", self.metrics.entities), "entities", GREEN);
-                                });
+                                        });
+                                };
+                                mini(ui, &format!("{}", self.metrics.complexity), "complexity", YELLOW);
+                                mini(ui, &format!("{}", self.metrics.march_steps), "steps", TEXT);
+                                mini(ui, &format!("{}", self.metrics.entities), "entities", GREEN);
+                            });
 
                             ui.add_space(12.0);
 
@@ -305,6 +306,7 @@ impl EditorState {
                                         .rounding(4.0)
                                         .inner_margin(Margin::symmetric(8.0, 5.0))
                                         .show(ui, |ui| {
+                                            ui.set_min_width(ui.available_width());
                                             ui.horizontal(|ui| {
                                                 ui.label(RichText::new(key).font(FontId::monospace(10.0)).color(TEXT_DIM));
                                                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -320,6 +322,7 @@ impl EditorState {
                                     .rounding(4.0)
                                     .inner_margin(Margin::symmetric(8.0, 8.0))
                                     .show(ui, |ui| {
+                                        ui.set_min_width(ui.available_width());
                                         ui.label(RichText::new("No state data yet").font(FontId::monospace(9.0)).color(TEXT_MUTED));
                                     });
                             }
@@ -327,6 +330,11 @@ impl EditorState {
                     }
                 }
             });
+
+        // ── Central viewport (SDF raymarching output) ──
+        CentralPanel::default()
+            .frame(Frame::none().fill(Color32::TRANSPARENT))
+            .show(ctx, |_ui| {});
 
         // ── Resizable Equation Panel ──
         egui::TopBottomPanel::bottom("equation_panel")
@@ -408,10 +416,6 @@ impl EditorState {
                         });
                     });
             });
-
-        CentralPanel::default()
-            .frame(Frame::none().fill(BG_CANVAS))
-            .show(ctx, |_ui| {});
     }
 
     fn compile_and_send(&mut self) {

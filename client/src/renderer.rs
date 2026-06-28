@@ -11,7 +11,6 @@ pub struct Renderer {
     pub bind_group: wgpu::BindGroup,
     pub uniform_buffer: wgpu::Buffer,
     pub shader_module: wgpu::ShaderModule,
-    pub bind_group_layout: wgpu::BindGroupLayout,
     pub pipeline_layout: wgpu::PipelineLayout,
 }
 
@@ -116,7 +115,6 @@ impl Renderer {
             bind_group,
             uniform_buffer,
             shader_module,
-            bind_group_layout,
             pipeline_layout,
         }
     }
