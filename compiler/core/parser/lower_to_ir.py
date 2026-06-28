@@ -1,6 +1,6 @@
 import ast
 from ..ir.math_expr import (
-    Expr, Constant, Variable, Add, Sub, Mul, Div, Pow, Sin, Cos, Sqrt
+    Expr, Constant, Variable, Add, Sub, Mul, Div, Pow, Sin, Cos, Sqrt, Abs, Max, Min
 )
 from ..errors import SourceSpan, ParseError
 
@@ -69,6 +69,16 @@ def lower_expr(node: ast.AST) -> Expr:
             raise ParseError("Unsupported function call type", span=span, node_type="Call")
         
         func_name = node.func.id.lower()
+        
+        if func_name in ("max", "min"):
+            if len(node.args) != 2:
+                raise ParseError(f"Function {func_name} expects exactly 2 arguments", span=span, node_type="Call")
+            left = lower_expr(node.args[0])
+            right = lower_expr(node.args[1])
+            if func_name == "max":
+                return Max(left=left, right=right, span=span)
+            return Min(left=left, right=right, span=span)
+        
         if len(node.args) != 1:
             raise ParseError(f"Function {func_name} expects exactly 1 argument", span=span, node_type="Call")
         
@@ -80,15 +90,8 @@ def lower_expr(node: ast.AST) -> Expr:
             return Cos(expr=arg, span=span)
         if func_name == "sqrt":
             return Sqrt(expr=arg, span=span)
-        
-        if func_name in ("max", "min"):
-            if len(node.args) != 2:
-                raise ParseError(f"Function {func_name} expects exactly 2 arguments", span=span, node_type="Call")
-            left = lower_expr(node.args[0])
-            right = lower_expr(node.args[1])
-            if func_name == "max":
-                return Max(left=left, right=right, span=span)
-            return Min(left=left, right=right, span=span)
+        if func_name == "abs":
+            return Abs(expr=arg, span=span)
         
         raise ParseError(f"Unsupported function: {func_name}", span=span, node_type="Call")
 

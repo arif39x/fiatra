@@ -59,6 +59,10 @@ class Sqrt(UnaryOp):
     pass
 
 @dataclass(frozen=True, kw_only=True)
+class Abs(UnaryOp):
+    pass
+
+@dataclass(frozen=True, kw_only=True)
 class Max(BinaryOp):
     pass
 

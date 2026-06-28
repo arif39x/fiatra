@@ -1,6 +1,6 @@
 from typing import Any
 from ..ir.math_expr import (
-    Expr, Constant, Variable, Add, Sub, Mul, Div, Pow, Sin, Cos, Sqrt, Vec3
+    Expr, Constant, Variable, Add, Sub, Mul, Div, Pow, Sin, Cos, Sqrt, Abs, Vec3
 )
 
 class ExprVisitor:
@@ -49,6 +49,9 @@ class ExprTransformer(ExprVisitor):
         
     def visit_Sqrt(self, expr: Sqrt) -> Expr:
         return Sqrt(expr=self.visit(expr.expr), span=expr.span, value_type=expr.value_type)
-        
+
+    def visit_Abs(self, expr: Abs) -> Expr:
+        return Abs(expr=self.visit(expr.expr), span=expr.span, value_type=expr.value_type)
+
     def visit_Vec3(self, expr: Vec3) -> Expr:
         return Vec3(x=self.visit(expr.x), y=self.visit(expr.y), z=self.visit(expr.z), span=expr.span, value_type=expr.value_type)
