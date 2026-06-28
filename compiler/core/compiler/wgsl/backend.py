@@ -1,4 +1,5 @@
 from ...ir.math_expr import (
+    Abs,
     Add,
     Constant,
     Cos,
@@ -79,6 +80,9 @@ class WGSLExprCompiler(ExprVisitor):
 
     def visit_Sqrt(self, expr: Sqrt) -> WGSLNode:
         return WGSLCallExpr(func_name="sqrt", args=[self.visit(expr.expr)])
+
+    def visit_Abs(self, expr: Abs) -> WGSLNode:
+        return WGSLCallExpr(func_name="abs", args=[self.visit(expr.expr)])
 
     def visit_Vec3(self, expr: Vec3) -> WGSLNode:
         return WGSLVec3(

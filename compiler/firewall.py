@@ -2,7 +2,7 @@ import ast
 
 from fastapi import HTTPException
 
-ALLOWED_FUNCS = {"sin", "cos", "Min", "Max", "sqrt"}
+ALLOWED_FUNCS = {"sin", "cos", "Min", "Max", "sqrt", "abs"}
 ALLOWED_VARS = {"x", "y", "z", "state_x", "state_y", "state_z"}
 ALLOWED_OPS = {
     ast.Add,

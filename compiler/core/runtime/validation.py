@@ -1,5 +1,6 @@
 from ..errors import ValidationError
 from ..ir.math_expr import (
+    Abs,
     Add,
     BinaryOp,
     Constant,
@@ -91,6 +92,9 @@ class ValidatorPass(ExprVisitor):
         self.visit_UnaryOp(expr)
 
     def visit_Sqrt(self, expr: Sqrt):
+        self.visit_UnaryOp(expr)
+
+    def visit_Abs(self, expr: Abs):
         self.visit_UnaryOp(expr)
 
     def visit_Vec3(self, expr: Vec3):

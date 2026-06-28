@@ -1,5 +1,6 @@
 from ..errors import TypeError
 from ..ir.math_expr import (
+    Abs,
     Add,
     BinaryOp,
     Constant,
@@ -127,6 +128,9 @@ class TypeInferencer(ExprTransformer):
 
     def visit_Sqrt(self, expr: Sqrt) -> Expr:
         return self._visit_unary_op(expr, Sqrt)
+
+    def visit_Abs(self, expr: Abs) -> Expr:
+        return self._visit_unary_op(expr, Abs)
 
 
 def infer_type(expr: Expr) -> Expr:

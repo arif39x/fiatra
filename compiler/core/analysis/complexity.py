@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from ..errors import ComplexityError
-from ..ir.math_expr import BinaryOp, Expr, Pow, UnaryOp, Vec3
+from ..ir.math_expr import BinaryOp, Expr, Pow, UnaryOp, Vec3, Constant
 from ..visitor.expr_visitor import ExprVisitor
 
 
@@ -37,9 +37,6 @@ class ComplexityAnalyzer(ExprVisitor):
     def visit_Pow(self, expr: Pow):
         self._check_limits(expr)
 
-        # only check static power exponents if they are constants
-        from ..ir.math_expr import Constant
-
         if (
             isinstance(expr.right, Constant)
             and expr.right.value > self.config.max_pow_exponent
@@ -74,6 +71,12 @@ class ComplexityAnalyzer(ExprVisitor):
     def visit_Div(self, expr: Expr):
         self.visit_BinaryOp(expr)
 
+    def visit_Max(self, expr: Expr):
+        self.visit_BinaryOp(expr)
+
+    def visit_Min(self, expr: Expr):
+        self.visit_BinaryOp(expr)
+
     def visit_UnaryOp(self, expr: UnaryOp):
         self._check_limits(expr)
         self.current_depth += 1
@@ -87,6 +90,9 @@ class ComplexityAnalyzer(ExprVisitor):
         self.visit_UnaryOp(expr)
 
     def visit_Sqrt(self, expr: Expr):
+        self.visit_UnaryOp(expr)
+
+    def visit_Abs(self, expr: Expr):
         self.visit_UnaryOp(expr)
 
     def visit_Vec3(self, expr: Vec3):
@@ -103,5 +109,5 @@ def analyze_complexity(
 ) -> Expr:
     visitor = ComplexityAnalyzer(config)
     visitor.visit(expr)
-    expr.complexity_score = visitor.node_count
+    object.__setattr__(expr, "complexity_score", visitor.node_count)
     return expr

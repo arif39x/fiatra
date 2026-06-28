@@ -1,22 +1,20 @@
-from ..ir.math_expr import (
-    Expr, Constant, Variable, BinaryOp, UnaryOp, Vec3
-)
+from ..ir.math_expr import BinaryOp, Constant, Expr, UnaryOp, Variable, Vec3
 from ..visitor.expr_visitor import ExprVisitor
+
 
 class TreePrinter(ExprVisitor):
     def __init__(self):
         self.indent = 0
-        
+
     def _print_line(self, text: str, node: Expr):
         prefix = "  " * self.indent
-        
-        # Add metadata info if available
+
         meta = []
         if node.value_type:
             meta.append(node.value_type.name)
         if node.span:
             meta.append(f"L{node.span.line}:C{node.span.column}")
-            
+
         meta_str = f" [{', '.join(meta)}]" if meta else ""
         return f"{prefix}{text}{meta_str}\n"
 
@@ -34,11 +32,26 @@ class TreePrinter(ExprVisitor):
         self.indent -= 1
         return res
 
-    def visit_Add(self, expr: Expr) -> str: return self.visit_BinaryOp(expr)
-    def visit_Sub(self, expr: Expr) -> str: return self.visit_BinaryOp(expr)
-    def visit_Mul(self, expr: Expr) -> str: return self.visit_BinaryOp(expr)
-    def visit_Div(self, expr: Expr) -> str: return self.visit_BinaryOp(expr)
-    def visit_Pow(self, expr: Expr) -> str: return self.visit_BinaryOp(expr)
+    def visit_Add(self, expr: Expr) -> str:
+        return self.visit_BinaryOp(expr)
+
+    def visit_Sub(self, expr: Expr) -> str:
+        return self.visit_BinaryOp(expr)
+
+    def visit_Mul(self, expr: Expr) -> str:
+        return self.visit_BinaryOp(expr)
+
+    def visit_Div(self, expr: Expr) -> str:
+        return self.visit_BinaryOp(expr)
+
+    def visit_Pow(self, expr: Expr) -> str:
+        return self.visit_BinaryOp(expr)
+
+    def visit_Max(self, expr: Expr) -> str:
+        return self.visit_BinaryOp(expr)
+
+    def visit_Min(self, expr: Expr) -> str:
+        return self.visit_BinaryOp(expr)
 
     def visit_UnaryOp(self, expr: UnaryOp) -> str:
         res = self._print_line(f"{type(expr).__name__}", expr)
@@ -47,9 +60,17 @@ class TreePrinter(ExprVisitor):
         self.indent -= 1
         return res
 
-    def visit_Sin(self, expr: Expr) -> str: return self.visit_UnaryOp(expr)
-    def visit_Cos(self, expr: Expr) -> str: return self.visit_UnaryOp(expr)
-    def visit_Sqrt(self, expr: Expr) -> str: return self.visit_UnaryOp(expr)
+    def visit_Sin(self, expr: Expr) -> str:
+        return self.visit_UnaryOp(expr)
+
+    def visit_Cos(self, expr: Expr) -> str:
+        return self.visit_UnaryOp(expr)
+
+    def visit_Sqrt(self, expr: Expr) -> str:
+        return self.visit_UnaryOp(expr)
+
+    def visit_Abs(self, expr: Expr) -> str:
+        return self.visit_UnaryOp(expr)
 
     def visit_Vec3(self, expr: Vec3) -> str:
         res = self._print_line("Vec3", expr)
@@ -59,6 +80,7 @@ class TreePrinter(ExprVisitor):
         res += self.visit(expr.z)
         self.indent -= 1
         return res
+
 
 def print_expr_tree(expr: Expr) -> str:
     """Returns a formatted string representing the expression tree."""
