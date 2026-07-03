@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod export;
+pub mod gizmo;
 pub mod mesh;
 pub mod raycast;
 pub mod scene;

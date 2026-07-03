@@ -7,6 +7,7 @@ use crate::ui::generation_status::GenerationStatusPanel;
 use crate::ui::inspector::Inspector;
 use crate::ui::scene_panel::ScenePanel;
 use crate::ui::style::*;
+use crate::ui::toolbar::Toolbar;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -42,6 +43,7 @@ pub struct EditorState {
     pub gen_status: GenerationStatusPanel,
     pub scene_panel: ScenePanel,
     pub inspector_panel: Inspector,
+    pub toolbar_panel: Toolbar,
     pub undo: UndoStack,
     pub scene: Scene,
     pub selected_entity: Option<EntityId>,
@@ -69,6 +71,7 @@ impl EditorState {
             gen_status: GenerationStatusPanel::new(),
             scene_panel: ScenePanel::new(),
             inspector_panel: Inspector::new(),
+            toolbar_panel: Toolbar::new(),
             undo: UndoStack::new(),
             scene: Scene::new(),
             selected_entity: None,
@@ -151,6 +154,8 @@ impl EditorState {
         }
 
         self.inspector_panel.draw(ctx, &mut self.scene, self.selected_entity, &mut self.undo);
+
+        self.toolbar_panel.draw(ctx, &mut self.scene, &mut self.selected_entity);
 
         self.chat.draw(ctx);
         self.gen_status.draw(ctx);

@@ -15,6 +15,7 @@ use crate::core::math::Quaternion;
 use crate::core::skeleton::Skeleton;
 use crate::network::{EntityData, ServerMessage};
 use crate::render::export::{export_asset, ExportFormat, ExportParams};
+use crate::render::gizmo::collect_gizmo_data;
 use crate::render::mesh::{create_cube, create_plane, create_sphere};
 use crate::render::raycast::pick_entity;
 use crate::render::{OrbitCamera, SkinRenderer, StaticRenderer, Vertex};
@@ -495,6 +496,9 @@ pub async fn run() {
                                     MeshType::Custom => continue,
                                 };
                                 static_renderer.add_mesh(&device, verts, idxs, world_mat, [albedo.0, albedo.1, albedo.2], metallic, roughness);
+                            }
+                            for (giz_verts, giz_idxs, giz_mat, giz_col, giz_met, giz_rough) in collect_gizmo_data(&editor.scene) {
+                                static_renderer.add_mesh(&device, giz_verts, giz_idxs, giz_mat, giz_col, giz_met, giz_rough);
                             }
                             static_renderer.update_camera(&queue, &camera);
                             static_renderer.draw(&mut rpass);
