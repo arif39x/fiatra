@@ -1,6 +1,7 @@
 pub mod camera;
 pub mod export;
 pub mod mesh;
+pub mod raycast;
 pub mod scene;
 pub mod static_renderer;
 

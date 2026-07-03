@@ -69,7 +69,7 @@ impl Scene {
         }
     }
 
-    pub fn collect_render_data(&self) -> Vec<(MeshType, [f32; 16], (f32, f32, f32), f32, f32)> {
+    pub fn collect_render_data(&self, selected: Option<EntityId>) -> Vec<(MeshType, [f32; 16], (f32, f32, f32), f32, f32)> {
         let transforms = self.world.query::<TransformComponent>();
         let meshes = self.world.query::<MeshComponent>();
         let materials = self.world.query::<MaterialComponent>();
@@ -90,6 +90,11 @@ impl Scene {
             let (r, g, b, metallic, roughness) = match material {
                 Some(m) => (m.albedo.0, m.albedo.1, m.albedo.2, m.metallic, m.roughness),
                 None => (0.8, 0.8, 0.8, 0.0, 0.5),
+            };
+            let (r, g, b) = if Some(*id) == selected {
+                (r.min(1.0) * 1.5, g.min(1.0) * 1.5, b.min(1.0) * 1.5)
+            } else {
+                (r, g, b)
             };
             results.push((mesh_type, world_mat, (r, g, b), metallic, roughness));
         }

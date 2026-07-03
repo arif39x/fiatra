@@ -12,12 +12,12 @@ use winit::{
 use crate::animation::playback::Animator;
 use crate::core::ecs::MeshType;
 use crate::core::math::Quaternion;
-use crate::core::scene::Scene;
 use crate::core::skeleton::Skeleton;
 use crate::network::{EntityData, ServerMessage};
 use crate::render::export::{export_asset, ExportFormat, ExportParams};
-use crate::render::mesh::{create_cube, create_plane, create_sphere, StaticVertex};
-use crate::render::{identity_matrix, multiply_matrices, scale_matrix, translation_matrix, OrbitCamera, SkinRenderer, StaticRenderer, Vertex};
+use crate::render::mesh::{create_cube, create_plane, create_sphere};
+use crate::render::raycast::pick_entity;
+use crate::render::{OrbitCamera, SkinRenderer, StaticRenderer, Vertex};
 use crate::ui::{EditorState, LogLevel};
 
 pub async fn run() {
@@ -104,32 +104,31 @@ pub async fn run() {
     let mut static_renderer = StaticRenderer::new(&device, &queue, &config);
     let mut camera = OrbitCamera::new(config.width as f32 / config.height as f32);
     let mut animator = Animator::new();
-    let mut scene = Scene::new();
 
     {
-        let cube = scene.spawn_primitive(MeshType::Cube);
-        if let Some(t) = scene.world.get_mut::<crate::core::ecs::TransformComponent>(cube) {
+        let cube = editor.scene.spawn_primitive(MeshType::Cube);
+        if let Some(t) = editor.scene.world.get_mut::<crate::core::ecs::TransformComponent>(cube) {
             t.position = (-1.5, 0.5, 0.0);
         }
-        if let Some(m) = scene.world.get_mut::<crate::core::ecs::MaterialComponent>(cube) {
+        if let Some(m) = editor.scene.world.get_mut::<crate::core::ecs::MaterialComponent>(cube) {
             m.albedo = (0.8, 0.2, 0.2);
         }
 
-        let sphere = scene.spawn_primitive(MeshType::Sphere(16));
-        if let Some(t) = scene.world.get_mut::<crate::core::ecs::TransformComponent>(sphere) {
+        let sphere = editor.scene.spawn_primitive(MeshType::Sphere(16));
+        if let Some(t) = editor.scene.world.get_mut::<crate::core::ecs::TransformComponent>(sphere) {
             t.position = (0.0, 0.5, 0.0);
             t.scale = (0.8, 0.8, 0.8);
         }
-        if let Some(m) = scene.world.get_mut::<crate::core::ecs::MaterialComponent>(sphere) {
+        if let Some(m) = editor.scene.world.get_mut::<crate::core::ecs::MaterialComponent>(sphere) {
             m.albedo = (0.2, 0.6, 0.8);
         }
 
-        let plane = scene.spawn_primitive(MeshType::Plane);
-        if let Some(t) = scene.world.get_mut::<crate::core::ecs::TransformComponent>(plane) {
+        let plane = editor.scene.spawn_primitive(MeshType::Plane);
+        if let Some(t) = editor.scene.world.get_mut::<crate::core::ecs::TransformComponent>(plane) {
             t.position = (0.0, -0.5, 0.0);
             t.scale = (3.0, 1.0, 3.0);
         }
-        if let Some(m) = scene.world.get_mut::<crate::core::ecs::MaterialComponent>(plane) {
+        if let Some(m) = editor.scene.world.get_mut::<crate::core::ecs::MaterialComponent>(plane) {
             m.albedo = (0.3, 0.3, 0.3);
         }
 
@@ -140,6 +139,8 @@ pub async fn run() {
     let mut mouse_pressed = false;
     let mut prev_mouse_pos: Option<(f64, f64)> = None;
     let mut right_mouse_pressed = false;
+    let mut viewport_click: Option<(f64, f64)> = None;
+    let mut mouse_drag = false;
 
     std::thread::spawn(move || {
         let rt = Runtime::new().expect("Failed to create Tokio runtime");
@@ -223,9 +224,29 @@ pub async fn run() {
                     match event {
                         WindowEvent::MouseInput { state, button, .. } => {
                             if *button == MouseButton::Left {
-                                mouse_pressed = *state == ElementState::Pressed;
-                                if !mouse_pressed {
+                                if *state == ElementState::Pressed {
+                                    mouse_pressed = true;
+                                    mouse_drag = false;
+                                    viewport_click = prev_mouse_pos;
+                                } else {
+                                    mouse_pressed = false;
+                                    if !mouse_drag {
+                                        if let Some(click_pos) = viewport_click {
+                                            let w = config.width as f64;
+                                            let h = config.height as f64;
+                                            let mx = click_pos.0;
+                                            let my = click_pos.1;
+                                            if mx >= 0.0 && my >= 0.0 && mx < w && my < h {
+                                                if let Some((hit, _)) = pick_entity(mx as f32, my as f32, w as f32, h as f32, &camera, &editor.scene) {
+                                                    editor.select_entity(hit);
+                                                } else {
+                                                    editor.clear_selection();
+                                                }
+                                            }
+                                        }
+                                    }
                                     prev_mouse_pos = None;
+                                    viewport_click = None;
                                 }
                             }
                             if *button == MouseButton::Right {
@@ -239,6 +260,7 @@ pub async fn run() {
                             let pos = (position.x, position.y);
                             if mouse_pressed || right_mouse_pressed {
                                 if let Some(prev) = prev_mouse_pos {
+                                    mouse_drag = true;
                                     let dx = ((pos.0 - prev.0) * 0.005) as f32;
                                     let dy = ((pos.1 - prev.1) * 0.005) as f32;
                                     if mouse_pressed {
@@ -445,7 +467,7 @@ pub async fn run() {
                             skin_renderer.draw(&mut rpass);
 
                             static_renderer.clear();
-                            for (mesh_type, world_mat, albedo, metallic, roughness) in scene.collect_render_data() {
+                            for (mesh_type, world_mat, albedo, metallic, roughness) in editor.scene.collect_render_data(editor.selected_entity) {
                                 let (verts, idxs) = match mesh_type {
                                     MeshType::Cube => create_cube(),
                                     MeshType::Sphere(seg) => create_sphere(seg),

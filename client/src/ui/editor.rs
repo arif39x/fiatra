@@ -1,7 +1,9 @@
 use crate::core::ecs::*;
+use crate::core::scene::Scene;
 use crate::network::EntityData;
 use crate::ui::chat_panel::ChatPanel;
 use crate::ui::generation_status::GenerationStatusPanel;
+use crate::ui::scene_panel::ScenePanel;
 use crate::ui::style::*;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
@@ -36,7 +38,8 @@ pub struct EditorState {
     pub metrics: PerformanceMetrics,
     pub chat: ChatPanel,
     pub gen_status: GenerationStatusPanel,
-    pub scene: EcsWorld,
+    pub scene_panel: ScenePanel,
+    pub scene: Scene,
     pub selected_entity: Option<EntityId>,
     pub loaded_character: bool,
     pub loaded_motion: bool,
@@ -60,7 +63,8 @@ impl EditorState {
             metrics: PerformanceMetrics::default(),
             chat: ChatPanel::new(),
             gen_status: GenerationStatusPanel::new(),
-            scene: EcsWorld::new(),
+            scene_panel: ScenePanel::new(),
+            scene: Scene::new(),
             selected_entity: None,
             loaded_character: false,
             loaded_motion: false,
@@ -136,9 +140,28 @@ impl EditorState {
             .frame(Frame::none().fill(Color32::TRANSPARENT))
             .show(ctx, |_ui| {});
 
+        if let Some(clicked) = self.scene_panel.draw(ctx, &mut self.scene) {
+            self.select_entity(clicked);
+        }
+
         self.chat.draw(ctx);
         self.gen_status.draw(ctx);
         self.draw_export(ctx);
+    }
+
+    pub fn select_entity(&mut self, id: EntityId) {
+        if let Some(old) = self.selected_entity {
+            self.scene.world.remove::<Selected>(old);
+        }
+        self.scene.world.add(id, Selected);
+        self.selected_entity = Some(id);
+    }
+
+    pub fn clear_selection(&mut self) {
+        if let Some(old) = self.selected_entity {
+            self.scene.world.remove::<Selected>(old);
+        }
+        self.selected_entity = None;
     }
 
     fn draw_export(&mut self, ctx: &Context) {
@@ -174,9 +197,9 @@ impl EditorState {
 
     pub fn handle_entities(&mut self, entities: &[EntityData]) {
         for ed in entities {
-            let eid = self.scene.spawn();
-            self.scene.add(eid, TransformComponent::identity());
-            self.scene.add(eid, LabelComponent {
+            let eid = self.scene.world.spawn();
+            self.scene.world.add(eid, TransformComponent::identity());
+            self.scene.world.add(eid, LabelComponent {
                 name: ed.label.clone(),
                 entity_type: ed.entity_type.clone(),
             });
@@ -184,14 +207,14 @@ impl EditorState {
             match ed.entity_type.as_str() {
                 "generate_skeleton" => {
                     if let Ok(skel) = serde_json::from_value::<crate::core::skeleton::Skeleton>(ed.data.clone()) {
-                        self.scene.add(eid, SkeletonComponent { skeleton: skel });
+                        self.scene.world.add(eid, SkeletonComponent { skeleton: skel });
                     }
                 }
                 "generate_mesh" => {
-                    self.scene.add(eid, MeshComponent { mesh_data: None, mesh_type: None });
+                    self.scene.world.add(eid, MeshComponent { mesh_data: None, mesh_type: None });
                 }
                 "generate_motion" => {
-                    self.scene.add(eid, MotionComponent {
+                    self.scene.world.add(eid, MotionComponent {
                         animator: crate::animation::playback::Animator::new(),
                         joint_params: Some(ed.data.clone()),
                     });
