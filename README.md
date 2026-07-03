@@ -1,15 +1,19 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="asset/logo.jpg">
-  <img alt="Fiatra logo" src="asset/logo.jpg" width="160">
-</picture>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="asset/logo.jpg">
+    <img alt="Fiatra logo" src="asset/logo.jpg" width="160">
+  </picture>
+</p>
 
-# Fiatra
+<h1 align="center">Fiatra</h1>
 
-![Rust](https://img.shields.io/badge/Rust-1.75+-DEA584?logo=rust)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python)
-![WebGPU](https://img.shields.io/badge/WebGPU-WGSL-FF6B35)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-alpha-orange)
+<p align="center">
+  <img alt="Rust" src="https://img.shields.io/badge/Rust-1.75+-DEA584?logo=rust">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python">
+  <img alt="WebGPU" src="https://img.shields.io/badge/WebGPU-WGSL-FF6B35">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="Status" src="https://img.shields.io/badge/status-alpha-orange">
+</p>
 
 **Fiatra** is an AI Character & Animation Studio — a desktop application that takes text prompts and produces rigged, animated, exportable 3D characters, all with a real-time WGPU preview.
 
