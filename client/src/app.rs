@@ -10,7 +10,7 @@ use winit::{
 };
 
 use crate::animation::playback::Animator;
-use crate::core::ecs::MeshType;
+use crate::core::ecs::{MaterialComponent, MeshType, TransformComponent};
 use crate::core::math::Quaternion;
 use crate::core::skeleton::Skeleton;
 use crate::network::{EntityData, ServerMessage};
@@ -409,7 +409,33 @@ pub async fn run() {
 
                         if let Some(msg_json) = editor.chat.pending_send.take() {
                             if let Some(tx) = editor.ws_tx.lock().unwrap().as_ref() {
-                                let _ = tx.send(serde_json::json!({"type":"chat","messages":serde_json::from_str::<serde_json::Value>(&msg_json).unwrap()}).to_string());
+                                let mut scene_entities = Vec::new();
+                                let transform_data: Vec<(u64, (f32, f32, f32), (f32, f32, f32), (f32, f32, f32))> = {
+                                    let transforms = editor.scene.world.query::<TransformComponent>();
+                                    transforms.iter().map(|(id, tc)| {
+                                        (*id, tc.position, tc.rotation, tc.scale)
+                                    }).collect()
+                                };
+                                for (id, pos, rot, scale) in &transform_data {
+                                    let label = editor.scene.world.get::<crate::core::ecs::LabelComponent>(*id)
+                                        .map(|l| l.name.clone()).unwrap_or_default();
+                                    let mat = editor.scene.world.get::<MaterialComponent>(*id);
+                                    let (cr, cg, cb) = mat.map(|m| m.albedo).unwrap_or((0.8, 0.8, 0.8));
+                                    scene_entities.push(serde_json::json!({
+                                        "entity_id": id,
+                                        "label": label,
+                                        "entity_type": "primitive",
+                                        "position": [pos.0, pos.1, pos.2],
+                                        "rotation": [rot.0, rot.1, rot.2],
+                                        "scale": [scale.0, scale.1, scale.2],
+                                        "color": [cr, cg, cb],
+                                    }));
+                                }
+                                let _ = tx.send(serde_json::json!({
+                                    "type": "chat",
+                                    "messages": serde_json::from_str::<serde_json::Value>(&msg_json).unwrap(),
+                                    "scene_state": scene_entities,
+                                }).to_string());
                             }
                             editor.chat.processing = true;
                         }

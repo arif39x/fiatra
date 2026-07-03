@@ -10,7 +10,9 @@ impl Toolbar {
         Self { open: true }
     }
 
-    pub fn draw(&mut self, ctx: &egui::Context, scene: &mut Scene, selected: &mut Option<EntityId>) {
+    pub fn draw(&mut self, ctx: &egui::Context, scene: &mut Scene, selected: &mut Option<EntityId>) -> Option<String> {
+        let mut quick_command: Option<String> = None;
+
         egui::Window::new("Toolbar")
             .id(egui::Id::new("toolbar_window"))
             .default_width(160.0)
@@ -41,6 +43,23 @@ impl Toolbar {
                         *selected = None;
                     }
                 }
+
+                ui.separator();
+                ui.label("Quick Commands");
+                if ui.button("Arrange in Grid").clicked() {
+                    quick_command = Some("Arrange all objects in a 3x3 grid".to_string());
+                }
+                if ui.button("Randomize Colors").clicked() {
+                    quick_command = Some("Randomize the colors of all objects".to_string());
+                }
+                if ui.button("Arrange in Circle").clicked() {
+                    quick_command = Some("Arrange all objects in a circle".to_string());
+                }
+                if ui.button("Clear Scene").clicked() {
+                    quick_command = Some("Clear the scene and start fresh".to_string());
+                }
             });
+
+        quick_command
     }
 }

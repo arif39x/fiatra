@@ -34,6 +34,9 @@ async def websocket_endpoint(ws: WebSocket):
             data = await ws.receive_text()
             msg = json.loads(data)
             if msg.get("type") == "chat":
+                scene_state = msg.get("scene_state", [])
+                if scene_state:
+                    router.sync_scene(scene_state)
                 result = await router.process(msg)
                 await ws.send_json({"type": "ChatReply", **result})
             else:

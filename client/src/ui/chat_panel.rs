@@ -174,6 +174,30 @@ impl ChatPanel {
         self.input.clear();
     }
 
+    pub fn send_quick_command(&mut self, command: &str) {
+        self.messages.push(ChatMessage {
+            role: MessageRole::User,
+            text: command.to_string(),
+            entity_ids: vec![],
+        });
+
+        let chat_messages: Vec<serde_json::Value> = self
+            .messages
+            .iter()
+            .map(|m| {
+                let role = match m.role {
+                    MessageRole::User => "user",
+                    MessageRole::Assistant => "assistant",
+                    MessageRole::System => "system",
+                };
+                serde_json::json!({"role": role, "content": m.text})
+            })
+            .collect();
+
+        self.pending_send = Some(serde_json::to_string(&chat_messages).unwrap_or_default());
+        self.processing = true;
+    }
+
     pub fn receive_response(&mut self, reply: &str, entity_ids: &[u64]) {
         self.messages.push(ChatMessage {
             role: MessageRole::Assistant,

@@ -55,6 +55,7 @@ pub struct EditorState {
     pub export_format: String,
     pub export_path: String,
     pub export_triggered: bool,
+    pub scene_sync_pending: bool,
 }
 
 impl EditorState {
@@ -83,6 +84,7 @@ impl EditorState {
             export_format: "glb".to_string(),
             export_path: "output/character.glb".to_string(),
             export_triggered: false,
+            scene_sync_pending: false,
         }
     }
 
@@ -155,7 +157,9 @@ impl EditorState {
 
         self.inspector_panel.draw(ctx, &mut self.scene, self.selected_entity, &mut self.undo);
 
-        self.toolbar_panel.draw(ctx, &mut self.scene, &mut self.selected_entity);
+        if let Some(cmd) = self.toolbar_panel.draw(ctx, &mut self.scene, &mut self.selected_entity) {
+            self.chat.send_quick_command(&cmd);
+        }
 
         self.chat.draw(ctx);
         self.gen_status.draw(ctx);

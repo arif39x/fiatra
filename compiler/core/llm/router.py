@@ -130,6 +130,24 @@ class LLMRouter:
             "entities": new_entities,
         }
 
+    def sync_scene(self, entities: list):
+        self.scene.entities.clear()
+        self.scene._next_id = 1
+        for ent in entities:
+            eid = ent.get("entity_id", self.scene._next_id)
+            if eid >= self.scene._next_id:
+                self.scene._next_id = eid + 1
+            label = ent.get("label", "")
+            entity_type = ent.get("entity_type", "primitive")
+            data = {
+                "position": ent.get("position", [0.0, 0.0, 0.0]),
+                "rotation": ent.get("rotation", [0.0, 0.0, 0.0]),
+                "scale": ent.get("scale", [1.0, 1.0, 1.0]),
+                "color": ent.get("color", [0.8, 0.8, 0.8]),
+            }
+            from ..scene_manager import SceneEntity
+            self.scene.entities[eid] = SceneEntity(eid, entity_type, data, label)
+
     def _format_scene_context(self) -> str:
         if not self.scene.entities:
             return "The scene is empty."
