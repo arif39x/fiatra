@@ -141,6 +141,8 @@ pub async fn run() {
     let mut right_mouse_pressed = false;
     let mut viewport_click: Option<(f64, f64)> = None;
     let mut mouse_drag = false;
+    let mut ctrl_pressed = false;
+    let mut shift_pressed = false;
 
     std::thread::spawn(move || {
         let rt = Runtime::new().expect("Failed to create Tokio runtime");
@@ -287,6 +289,22 @@ pub async fn run() {
                                 MouseScrollDelta::PixelDelta(pos) => pos.y as f32 * 0.1,
                             };
                             camera.distance = (camera.distance - scroll * 0.3).clamp(0.5, 30.0);
+                        }
+                        WindowEvent::ModifiersChanged(mods) => {
+                            let s = mods.state();
+                            ctrl_pressed = s.intersects(winit::keyboard::ModifiersState::CONTROL);
+                            shift_pressed = s.intersects(winit::keyboard::ModifiersState::SHIFT);
+                        }
+                        WindowEvent::KeyboardInput { ref event, .. } => {
+                            if event.state == ElementState::Pressed && !event.repeat {
+                                if let winit::keyboard::PhysicalKey::Code(k) = event.physical_key {
+                                    if ctrl_pressed && k == winit::keyboard::KeyCode::KeyZ && !shift_pressed {
+                                        editor.undo_last();
+                                    } else if ctrl_pressed && k == winit::keyboard::KeyCode::KeyZ && shift_pressed {
+                                        editor.redo_last();
+                                    }
+                                }
+                            }
                         }
                         _ => {}
                     }

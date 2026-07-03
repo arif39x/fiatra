@@ -1,8 +1,10 @@
 use crate::core::ecs::*;
 use crate::core::scene::Scene;
+use crate::core::undo::{EditCommand, MaterialSnapshot, TransformSnapshot, UndoStack};
 use crate::network::EntityData;
 use crate::ui::chat_panel::ChatPanel;
 use crate::ui::generation_status::GenerationStatusPanel;
+use crate::ui::inspector::Inspector;
 use crate::ui::scene_panel::ScenePanel;
 use crate::ui::style::*;
 use std::sync::{Arc, Mutex};
@@ -39,6 +41,8 @@ pub struct EditorState {
     pub chat: ChatPanel,
     pub gen_status: GenerationStatusPanel,
     pub scene_panel: ScenePanel,
+    pub inspector_panel: Inspector,
+    pub undo: UndoStack,
     pub scene: Scene,
     pub selected_entity: Option<EntityId>,
     pub loaded_character: bool,
@@ -64,6 +68,8 @@ impl EditorState {
             chat: ChatPanel::new(),
             gen_status: GenerationStatusPanel::new(),
             scene_panel: ScenePanel::new(),
+            inspector_panel: Inspector::new(),
+            undo: UndoStack::new(),
             scene: Scene::new(),
             selected_entity: None,
             loaded_character: false,
@@ -144,9 +150,36 @@ impl EditorState {
             self.select_entity(clicked);
         }
 
+        self.inspector_panel.draw(ctx, &mut self.scene, self.selected_entity, &mut self.undo);
+
         self.chat.draw(ctx);
         self.gen_status.draw(ctx);
         self.draw_export(ctx);
+    }
+
+    pub fn undo_last(&mut self) {
+        if let Some(cmd) = self.undo.undo() {
+            match cmd {
+                EditCommand::Transform(snap) => {
+                    if let Some(t) = self.scene.world.get_mut::<TransformComponent>(snap.entity) {
+                        *t = snap.prev;
+                    }
+                }
+                EditCommand::Material(snap) => {
+                    if let Some(m) = self.scene.world.get_mut::<MaterialComponent>(snap.entity) {
+                        *m = snap.prev;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn redo_last(&mut self) {
+        // Re-apply the command (push it back, then push triggers apply on next edit)
+        // For simplicity, we invert the undo
+        if let Some(_cmd) = self.undo.redo() {
+            self.push_log(LogLevel::Info, "Redo: re-apply not yet fully implemented");
+        }
     }
 
     pub fn select_entity(&mut self, id: EntityId) {
