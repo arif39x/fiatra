@@ -19,7 +19,7 @@ for port in 8081; do
 done
 
 echo "Booting Compiler (Python)..."
-compiler/venv/bin/uvicorn api:app --app-dir compiler --port 8081 &
+compiler/venv/bin/python -m uvicorn api:app --app-dir compiler --port 8081 &
 PID_MATH=$!
 
 sleep 1

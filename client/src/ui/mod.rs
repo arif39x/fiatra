@@ -1,3 +1,4 @@
+mod chat_panel;
 mod editor;
 mod generation_status;
 mod prompt_panel;

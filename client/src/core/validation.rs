@@ -1,5 +1,6 @@
 use super::skeleton::Pose;
 
+#[allow(dead_code)]
 pub fn validate_pose(pose: &Pose) -> Vec<String> {
     let mut errors = pose.skeleton.validate();
     for (i, rot) in pose.joint_rotations.iter().enumerate() {

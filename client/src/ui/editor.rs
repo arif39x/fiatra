@@ -1,6 +1,7 @@
-use crate::network::ClientMessage;
+use crate::core::ecs::*;
+use crate::network::EntityData;
+use crate::ui::chat_panel::ChatPanel;
 use crate::ui::generation_status::GenerationStatusPanel;
-use crate::ui::prompt_panel::{MuseMode, PromptPanel};
 use crate::ui::style::*;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
@@ -29,22 +30,22 @@ pub struct PerformanceMetrics {
     pub fps: f32,
 }
 
-#[derive(PartialEq)]
-enum RightTab {
-    Console,
-}
-
 pub struct EditorState {
     pub logs: Vec<LogEntry>,
     pub ws_tx: Arc<Mutex<Option<UnboundedSender<String>>>>,
     pub metrics: PerformanceMetrics,
-    pub prompt_panel: PromptPanel,
+    pub chat: ChatPanel,
     pub gen_status: GenerationStatusPanel,
+    pub scene: EcsWorld,
+    pub selected_entity: Option<EntityId>,
     pub loaded_character: bool,
     pub loaded_motion: bool,
     pub character_mesh: Option<serde_json::Value>,
     pub character_skeleton: Option<serde_json::Value>,
     pub motion_clip: Option<serde_json::Value>,
+    pub export_format: String,
+    pub export_path: String,
+    pub export_triggered: bool,
 }
 
 impl EditorState {
@@ -57,13 +58,18 @@ impl EditorState {
             }],
             ws_tx,
             metrics: PerformanceMetrics::default(),
-            prompt_panel: PromptPanel::new(),
+            chat: ChatPanel::new(),
             gen_status: GenerationStatusPanel::new(),
+            scene: EcsWorld::new(),
+            selected_entity: None,
             loaded_character: false,
             loaded_motion: false,
             character_mesh: None,
             character_skeleton: None,
             motion_clip: None,
+            export_format: "glb".to_string(),
+            export_path: "output/character.glb".to_string(),
+            export_triggered: false,
         }
     }
 
@@ -130,42 +136,75 @@ impl EditorState {
             .frame(Frame::none().fill(Color32::TRANSPARENT))
             .show(ctx, |_ui| {});
 
-        self.prompt_panel.draw(ctx);
-        if self.prompt_panel.take_generate() {
-            self.send_generate_request();
-        }
+        self.chat.draw(ctx);
         self.gen_status.draw(ctx);
+        self.draw_export(ctx);
     }
 
-    fn send_generate_request(&mut self) {
-        let job_type = match self.prompt_panel.mode {
-            MuseMode::TextToCharacter => "text_to_mesh",
-            MuseMode::TextToMotion => "text_to_motion",
-            MuseMode::PoseStaging => "pose_interpolation",
-            MuseMode::StyleTransfer => "style_transfer",
-            MuseMode::Retarget => "retarget",
-        };
-        let mut params = serde_json::json!({
-            "prompt": self.prompt_panel.prompt,
-        });
-        if let Some(seed) = self.prompt_panel.seed {
-            params["seed"] = serde_json::json!(seed);
+    fn draw_export(&mut self, ctx: &Context) {
+        egui::Window::new("Export")
+            .id(egui::Id::new("export_window"))
+            .default_width(280.0)
+            .show(ctx, |ui| {
+                ui.label("Format:");
+                egui::ComboBox::from_id_source("export_fmt")
+                    .selected_text(&self.export_format.to_uppercase())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.export_format, "glb".to_string(), "GLB (glTF 2.0)");
+                        ui.selectable_value(&mut self.export_format, "fbx".to_string(), "FBX (ASCII)");
+                    });
+                ui.add_space(4.0);
+                ui.label("Path:");
+                ui.text_edit_singleline(&mut self.export_path);
+                ui.add_space(4.0);
+                let has_data = self.character_mesh.is_some() && self.character_skeleton.is_some();
+                if !has_data {
+                    ui.colored_label(Color32::RED, "No character data loaded");
+                }
+                let btn = egui::Button::new(
+                    RichText::new("Export").font(FontId::monospace(12.0)).color(Color32::WHITE),
+                )
+                .fill(if has_data { ACCENT_STRONG } else { BG_CARD })
+                .min_size([ui.available_width(), 28.0].into());
+                if ui.add(btn).clicked() && has_data {
+                    self.export_triggered = true;
+                }
+            });
+    }
+
+    pub fn handle_entities(&mut self, entities: &[EntityData]) {
+        for ed in entities {
+            let eid = self.scene.spawn();
+            self.scene.add(eid, TransformComponent::identity());
+            self.scene.add(eid, LabelComponent {
+                name: ed.label.clone(),
+                entity_type: ed.entity_type.clone(),
+            });
+
+            match ed.entity_type.as_str() {
+                "generate_skeleton" => {
+                    if let Ok(skel) = serde_json::from_value::<crate::core::skeleton::Skeleton>(ed.data.clone()) {
+                        self.scene.add(eid, SkeletonComponent { skeleton: skel });
+                    }
+                }
+                "generate_mesh" => {
+                    self.scene.add(eid, MeshComponent { mesh_data: None, mesh_type: None });
+                }
+                "generate_motion" => {
+                    self.scene.add(eid, MotionComponent {
+                        animator: crate::animation::playback::Animator::new(),
+                        joint_params: Some(ed.data.clone()),
+                    });
+                }
+                "edit_scene" => {
+                    if let Some(_lighting) = ed.data.get("lighting") {
+                    }
+                    if let Some(_materials) = ed.data.get("materials") {
+                    }
+                }
+                _ => {}
+            }
         }
-        if self.prompt_panel.mode == MuseMode::StyleTransfer {
-            params["style_prompt"] = serde_json::json!(self.prompt_panel.style_prompt);
-        }
-        let msg = ClientMessage {
-            job_request: Some(crate::network::JobRequest {
-                job_type: job_type.to_string(),
-                params,
-            }),
-        };
-        let serialized = serde_json::to_string(&msg).expect("Failed to serialize ClientMessage");
-        let guard = self.ws_tx.lock().expect("ws_tx lock poisoned");
-        if let Some(tx) = guard.as_ref() {
-            let _ = tx.send(serialized);
-        }
-        self.push_log(LogLevel::Info, &format!("Sent generate request: {}", job_type));
     }
 
     pub fn push_log(&mut self, level: LogLevel, msg: &str) {

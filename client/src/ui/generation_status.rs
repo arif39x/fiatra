@@ -14,6 +14,7 @@ pub struct GenerationJob {
     pub job_type: String,
     pub status: JobStatus,
     pub progress: f32,
+    #[allow(dead_code)]
     pub created_at: String,
 }
 

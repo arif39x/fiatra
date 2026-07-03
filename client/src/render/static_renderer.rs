@@ -36,15 +36,14 @@ pub struct StaticMeshGpu {
     vertex_buf: wgpu::Buffer,
     index_buf: wgpu::Buffer,
     index_count: u32,
-    model_buf: wgpu::Buffer,
     bind_group_0: wgpu::BindGroup,
 }
 
 pub struct StaticRenderer {
     pipeline: wgpu::RenderPipeline,
     camera_buf: wgpu::Buffer,
-    material_buf: wgpu::Buffer,
     light_buf: wgpu::Buffer,
+    bind_group_layout_0: wgpu::BindGroupLayout,
     bind_group_1: wgpu::BindGroup,
     meshes: Vec<StaticMeshGpu>,
 }
@@ -75,17 +74,6 @@ impl StaticRenderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let material_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("static_material"),
-            contents: bytemuck::bytes_of(&MaterialRaw {
-                albedo: [1.0, 1.0, 1.0, 1.0],
-                metallic: 0.0,
-                roughness: 0.5,
-                ambient_occlusion: 1.0,
-            }),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
         let light = LightRaw {
             direction: [-0.5, -0.8, -0.3],
             padding: 0.0,
@@ -104,6 +92,16 @@ impl StaticRenderer {
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
                     visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -137,16 +135,6 @@ impl StaticRenderer {
                     },
                     count: None,
                 },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
             ],
         });
 
@@ -155,8 +143,7 @@ impl StaticRenderer {
             layout: &bind_group_layout_1,
             entries: &[
                 wgpu::BindGroupEntry { binding: 0, resource: camera_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: material_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: light_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: light_buf.as_entire_binding() },
             ],
         });
 
@@ -203,8 +190,8 @@ impl StaticRenderer {
         Self {
             pipeline,
             camera_buf,
-            material_buf,
             light_buf,
+            bind_group_layout_0,
             bind_group_1,
             meshes: Vec::new(),
         }
@@ -216,6 +203,9 @@ impl StaticRenderer {
         vertices: Vec<StaticVertex>,
         indices: Vec<u32>,
         model_matrix: [f32; 16],
+        albedo: [f32; 3],
+        metallic: f32,
+        roughness: f32,
     ) {
         let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("static_mesh_vertex"),
@@ -234,11 +224,24 @@ impl StaticRenderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
+        let material = MaterialRaw {
+            albedo: [albedo[0], albedo[1], albedo[2], 1.0],
+            metallic,
+            roughness,
+            ambient_occlusion: 1.0,
+        };
+        let material_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("static_mat"),
+            contents: bytemuck::bytes_of(&material),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
         let bind_group_0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("static_bg0"),
-            layout: &self.pipeline.get_bind_group_layout(0),
+            layout: &self.bind_group_layout_0,
             entries: &[
                 wgpu::BindGroupEntry { binding: 0, resource: model_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: material_buf.as_entire_binding() },
             ],
         });
 
@@ -246,15 +249,8 @@ impl StaticRenderer {
             vertex_buf,
             index_buf,
             index_count: indices.len() as u32,
-            model_buf,
             bind_group_0,
         });
-    }
-
-    pub fn update_model(&self, queue: &wgpu::Queue, index: usize, model_matrix: [f32; 16]) {
-        if let Some(mesh) = self.meshes.get(index) {
-            queue.write_buffer(&mesh.model_buf, 0, bytemuck::bytes_of(&model_matrix));
-        }
     }
 
     pub fn update_camera(&self, queue: &wgpu::Queue, camera: &OrbitCamera) {
@@ -266,21 +262,8 @@ impl StaticRenderer {
         }));
     }
 
-    pub fn set_material(&self, queue: &wgpu::Queue, albedo: [f32; 3], metallic: f32, roughness: f32) {
-        queue.write_buffer(&self.material_buf, 0, bytemuck::bytes_of(&MaterialRaw {
-            albedo: [albedo[0], albedo[1], albedo[2], 1.0],
-            metallic,
-            roughness,
-            ambient_occlusion: 1.0,
-        }));
-    }
-
     pub fn clear(&mut self) {
         self.meshes.clear();
-    }
-
-    pub fn mesh_count(&self) -> usize {
-        self.meshes.len()
     }
 
     pub fn draw<'a>(&'a self, rpass: &mut wgpu::RenderPass<'a>) {

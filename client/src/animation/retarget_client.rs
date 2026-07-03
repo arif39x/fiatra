@@ -4,10 +4,12 @@ use crate::core::math::Quaternion;
 use crate::core::skeleton::Skeleton;
 use crate::animation::playback::MotionClip;
 
+#[allow(dead_code)]
 pub struct RetargetMap {
     pub src_to_tgt: HashMap<usize, usize>,
 }
 
+#[allow(dead_code)]
 pub fn apply_retarget(clip: &MotionClip, target: &Skeleton, map: &RetargetMap) -> MotionClip {
     let tgt_count = target.joint_count();
     let mut new_frames = Vec::with_capacity(clip.frame_count());
@@ -49,6 +51,7 @@ pub fn apply_retarget(clip: &MotionClip, target: &Skeleton, map: &RetargetMap) -
     }
 }
 
+#[allow(dead_code)]
 fn limb_scale_factor(src: &Skeleton, tgt: &Skeleton, map: &HashMap<usize, usize>) -> f32 {
     let mut total = 0.0f32;
     let mut count = 0u32;
@@ -67,6 +70,7 @@ fn limb_scale_factor(src: &Skeleton, tgt: &Skeleton, map: &HashMap<usize, usize>
     }
 }
 
+#[allow(dead_code)]
 fn bone_length(skeleton: &Skeleton, joint_index: usize) -> f32 {
     if joint_index >= skeleton.joint_count() {
         return 0.0;

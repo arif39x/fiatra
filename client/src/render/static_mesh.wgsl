@@ -18,10 +18,10 @@ struct Material {
 };
 
 @group(0) @binding(0) var<uniform> model_matrix: mat4x4<f32>;
+@group(0) @binding(1) var<uniform> material: Material;
 
 @group(1) @binding(0) var<uniform> camera: Camera;
-@group(1) @binding(1) var<uniform> material: Material;
-@group(1) @binding(2) var<uniform> light: Light;
+@group(1) @binding(1) var<uniform> light: Light;
 
 struct VSInput {
     @location(0) position: vec3<f32>,

@@ -10,11 +10,13 @@ use winit::{
 };
 
 use crate::animation::playback::Animator;
+use crate::core::ecs::MeshType;
 use crate::core::math::Quaternion;
+use crate::core::scene::Scene;
 use crate::core::skeleton::Skeleton;
 use crate::network::{EntityData, ServerMessage};
 use crate::render::export::{export_asset, ExportFormat, ExportParams};
-use crate::render::mesh::{create_cube, create_plane, create_sphere};
+use crate::render::mesh::{create_cube, create_plane, create_sphere, StaticVertex};
 use crate::render::{identity_matrix, multiply_matrices, scale_matrix, translation_matrix, OrbitCamera, SkinRenderer, StaticRenderer, Vertex};
 use crate::ui::{EditorState, LogLevel};
 
@@ -102,21 +104,36 @@ pub async fn run() {
     let mut static_renderer = StaticRenderer::new(&device, &queue, &config);
     let mut camera = OrbitCamera::new(config.width as f32 / config.height as f32);
     let mut animator = Animator::new();
+    let mut scene = Scene::new();
 
     {
-        let (cube_verts, cube_idxs) = create_cube();
-        let cube_matrix = multiply_matrices(&translation_matrix(-1.5, 0.5, 0.0), &scale_matrix(1.0, 1.0, 1.0));
-        static_renderer.add_mesh(&device, cube_verts, cube_idxs, cube_matrix);
+        let cube = scene.spawn_primitive(MeshType::Cube);
+        if let Some(t) = scene.world.get_mut::<crate::core::ecs::TransformComponent>(cube) {
+            t.position = (-1.5, 0.5, 0.0);
+        }
+        if let Some(m) = scene.world.get_mut::<crate::core::ecs::MaterialComponent>(cube) {
+            m.albedo = (0.8, 0.2, 0.2);
+        }
 
-        let (sphere_verts, sphere_idxs) = create_sphere(16);
-        let sphere_matrix = multiply_matrices(&translation_matrix(0.0, 0.5, 0.0), &scale_matrix(0.8, 0.8, 0.8));
-        static_renderer.add_mesh(&device, sphere_verts, sphere_idxs, sphere_matrix);
+        let sphere = scene.spawn_primitive(MeshType::Sphere(16));
+        if let Some(t) = scene.world.get_mut::<crate::core::ecs::TransformComponent>(sphere) {
+            t.position = (0.0, 0.5, 0.0);
+            t.scale = (0.8, 0.8, 0.8);
+        }
+        if let Some(m) = scene.world.get_mut::<crate::core::ecs::MaterialComponent>(sphere) {
+            m.albedo = (0.2, 0.6, 0.8);
+        }
 
-        let (plane_verts, plane_idxs) = create_plane();
-        let plane_matrix = multiply_matrices(&translation_matrix(0.0, -0.5, 0.0), &scale_matrix(3.0, 1.0, 3.0));
-        static_renderer.add_mesh(&device, plane_verts, plane_idxs, plane_matrix);
+        let plane = scene.spawn_primitive(MeshType::Plane);
+        if let Some(t) = scene.world.get_mut::<crate::core::ecs::TransformComponent>(plane) {
+            t.position = (0.0, -0.5, 0.0);
+            t.scale = (3.0, 1.0, 3.0);
+        }
+        if let Some(m) = scene.world.get_mut::<crate::core::ecs::MaterialComponent>(plane) {
+            m.albedo = (0.3, 0.3, 0.3);
+        }
 
-        editor.push_log(LogLevel::Ok, "3 primitives loaded (cube, sphere, plane)");
+        editor.push_log(LogLevel::Ok, "Scene initialized with 3 entities");
     }
 
     let mut last_frame_time = std::time::Instant::now();
@@ -426,7 +443,19 @@ pub async fn run() {
                             let pose = animator.current_pose();
                             skin_renderer.update_pose(&queue, &pose, &camera);
                             skin_renderer.draw(&mut rpass);
-                            static_renderer.set_material(&queue, [0.8, 0.2, 0.2], 0.0, 0.5);
+
+                            static_renderer.clear();
+                            for (mesh_type, world_mat, albedo, metallic, roughness) in scene.collect_render_data() {
+                                let (verts, idxs) = match mesh_type {
+                                    MeshType::Cube => create_cube(),
+                                    MeshType::Sphere(seg) => create_sphere(seg),
+                                    MeshType::Plane => create_plane(),
+                                    MeshType::Quad => create_plane(),
+                                    MeshType::Cylinder => create_cube(),
+                                    MeshType::Custom => continue,
+                                };
+                                static_renderer.add_mesh(&device, verts, idxs, world_mat, [albedo.0, albedo.1, albedo.2], metallic, roughness);
+                            }
                             static_renderer.update_camera(&queue, &camera);
                             static_renderer.draw(&mut rpass);
                         }

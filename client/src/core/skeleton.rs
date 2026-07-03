@@ -26,6 +26,7 @@ pub struct QuaternionData {
 }
 
 impl QuaternionData {
+    #[allow(dead_code)]
     pub fn identity() -> Self {
         Self {
             w: 1.0,
@@ -35,6 +36,7 @@ impl QuaternionData {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_quat(&self) -> Quaternion {
         Quaternion {
             w: self.w,
@@ -44,6 +46,7 @@ impl QuaternionData {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_quat(q: Quaternion) -> Self {
         Self {
             w: q.w,
@@ -71,10 +74,12 @@ impl Skeleton {
         self.joints.len()
     }
 
+    #[allow(dead_code)]
     pub fn joint_names(&self) -> Vec<&str> {
         self.joints.iter().map(|j| j.name.as_str()).collect()
     }
 
+    #[allow(dead_code)]
     pub fn index_of(&self, name: &str) -> Option<usize> {
         self.joints.iter().position(|j| j.name == name)
     }
@@ -83,6 +88,7 @@ impl Skeleton {
         self.joints.iter().map(|j| j.parent_index).collect()
     }
 
+    #[allow(dead_code)]
     pub fn root_index(&self) -> usize {
         self.joints
             .iter()
@@ -90,6 +96,7 @@ impl Skeleton {
             .unwrap_or(0)
     }
 
+    #[allow(dead_code)]
     pub fn validate(&self) -> Vec<String> {
         let mut errors = Vec::new();
         for (i, j) in self.joints.iter().enumerate() {

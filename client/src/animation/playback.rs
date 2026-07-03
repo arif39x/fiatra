@@ -21,6 +21,7 @@ impl MotionClip {
         self.frame_count() as f32 / self.fps
     }
 
+    #[allow(dead_code)]
     pub fn get_pose(&self, frame_index: usize) -> Pose {
         let idx = frame_index.min(self.frame_count().saturating_sub(1));
         Pose {
@@ -82,6 +83,7 @@ impl MotionClip {
         }
     }
 
+    #[allow(dead_code)]
     pub fn validate(&self) -> Vec<String> {
         let mut errors = self.skeleton.validate();
         if self.frame_count() == 0 {
@@ -152,10 +154,12 @@ impl Animator {
         self.playing = true;
     }
 
+    #[allow(dead_code)]
     pub fn stop(&mut self) {
         self.playing = false;
     }
 
+    #[allow(dead_code)]
     pub fn resume(&mut self) {
         self.playing = true;
     }

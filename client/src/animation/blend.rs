@@ -1,5 +1,6 @@
 use crate::core::skeleton::Pose;
 
+#[allow(dead_code)]
 pub fn crossfade(a: &Pose, b: &Pose, t: f32) -> Pose {
     let joints = a.joint_rotations.len().min(b.joint_rotations.len());
     let mut rotations = Vec::with_capacity(joints);
@@ -18,6 +19,7 @@ pub fn crossfade(a: &Pose, b: &Pose, t: f32) -> Pose {
     }
 }
 
+#[allow(dead_code)]
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
 }

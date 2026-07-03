@@ -7,8 +7,24 @@ struct JointMatrix {
     data: array<mat4x4<f32>, 128>,
 };
 
+struct Camera {
+    view_proj: mat4x4<f32>,
+    camera_pos: vec4<f32>,
+};
+
+struct Light {
+    direction: vec3<f32>,
+    padding: f32,
+    color: vec3<f32>,
+    ambient: vec3<f32>,
+};
+
 @group(0) @binding(0) var<uniform> skin: SkinUniform;
 @group(0) @binding(1) var<uniform> joint_matrices: JointMatrix;
+
+@group(1) @binding(0) var<uniform> camera: Camera;
+@group(1) @binding(1) var texture_sampler: sampler;
+@group(1) @binding(2) var texture: texture_2d<f32>;
 
 struct VSInput {
     @location(0) position: vec3<f32>,
@@ -46,28 +62,17 @@ fn vs_main(input: VSInput) -> VSOutput {
     let world_normal = (skin_matrix * vec4<f32>(input.normal, 0.0)).xyz;
 
     var output: VSOutput;
-    output.position = world_pos;
+    output.position = camera.view_proj * world_pos;
     output.normal = normalize(world_normal);
     output.uv = input.uv;
     output.world_pos = world_pos.xyz;
     return output;
 }
 
-struct Light {
-    direction: vec3<f32>,
-    color: vec3<f32>,
-    ambient: vec3<f32>,
-};
-
-@group(1) @binding(0) var<uniform> light: Light;
-@group(1) @binding(1) var texture_sampler: sampler;
-@group(1) @binding(2) var texture: texture_2d<f32>;
-
 @fragment
 fn fs_main(input: VSOutput) -> @location(0) vec4<f32> {
     let tex_color = textureSample(texture, texture_sampler, input.uv).rgb;
-    let ndotl = max(dot(input.normal, normalize(-light.direction)), 0.0);
-    let diffuse = light.color * ndotl;
-    let final_color = tex_color * (light.ambient + diffuse);
-    return vec4<f32>(final_color, 1.0);
+    let ndotl = max(dot(input.normal, normalize(-camera.camera_pos.xyz - input.world_pos)), 0.0);
+    let final_color = tex_color * (0.08 + ndotl * 0.7);
+    return vec4<f32>(final_color * 1.2, 1.0);
 }

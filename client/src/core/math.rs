@@ -18,6 +18,22 @@ impl Quaternion {
         }
     }
 
+    pub fn from_euler(x: f32, y: f32, z: f32) -> Self {
+        let cx = (x * 0.5).cos();
+        let sx = (x * 0.5).sin();
+        let cy = (y * 0.5).cos();
+        let sy = (y * 0.5).sin();
+        let cz = (z * 0.5).cos();
+        let sz = (z * 0.5).sin();
+        Self {
+            w: cx * cy * cz + sx * sy * sz,
+            x: sx * cy * cz - cx * sy * sz,
+            y: cx * sy * cz + sx * cy * sz,
+            z: cx * cy * sz - sx * sy * cz,
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn from_axis_angle(axis: (f32, f32, f32), angle: f32) -> Self {
         let (ax, ay, az) = axis;
         let length = (ax * ax + ay * ay + az * az).sqrt();
@@ -46,6 +62,7 @@ impl Quaternion {
         }
     }
 
+    #[allow(dead_code)]
     pub fn conjugate(self) -> Self {
         Self {
             w: self.w,
@@ -55,10 +72,12 @@ impl Quaternion {
         }
     }
 
+    #[allow(dead_code)]
     pub fn inverse(self) -> Self {
         self.conjugate().normalize()
     }
 
+    #[allow(dead_code)]
     pub fn rotate_vector(self, v: (f32, f32, f32)) -> (f32, f32, f32) {
         let qv = Quaternion {
             w: 0.0,
@@ -154,10 +173,12 @@ impl Mul for Quaternion {
 pub struct Transform {
     pub translation: (f32, f32, f32),
     pub rotation: Quaternion,
+    #[allow(dead_code)]
     pub scale: (f32, f32, f32),
 }
 
 impl Transform {
+    #[allow(dead_code)]
     pub fn identity() -> Self {
         Self {
             translation: (0.0, 0.0, 0.0),

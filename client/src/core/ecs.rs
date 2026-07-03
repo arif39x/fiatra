@@ -4,6 +4,77 @@ use std::marker::PhantomData;
 
 pub type EntityId = u64;
 
+// --- Scene Components ---
+
+pub struct SkeletonComponent {
+    pub skeleton: crate::core::skeleton::Skeleton,
+}
+
+#[derive(Clone)]
+pub enum MeshType {
+    Cube,
+    Sphere(u32),
+    Plane,
+    Quad,
+    Cylinder,
+    Custom,
+}
+
+pub struct MeshComponent {
+    pub mesh_data: Option<serde_json::Value>,
+    pub mesh_type: Option<MeshType>,
+}
+
+impl MeshComponent {
+    pub fn from_type(mesh_type: MeshType) -> Self {
+        Self { mesh_data: None, mesh_type: Some(mesh_type) }
+    }
+}
+
+pub struct MotionComponent {
+    pub animator: crate::animation::playback::Animator,
+    pub joint_params: Option<serde_json::Value>,
+}
+
+#[derive(Clone, Copy)]
+pub struct TransformComponent {
+    pub position: (f32, f32, f32),
+    pub rotation: (f32, f32, f32),
+    pub scale: (f32, f32, f32),
+    pub parent_id: Option<EntityId>,
+}
+
+impl TransformComponent {
+    pub fn identity() -> Self {
+        Self { position: (0.0, 0.0, 0.0), rotation: (0.0, 0.0, 0.0), scale: (1.0, 1.0, 1.0), parent_id: None }
+    }
+}
+
+pub enum LightType { Directional, Point, Ambient }
+
+pub struct LightingComponent {
+    pub light_type: LightType,
+    pub direction: (f32, f32, f32),
+    pub color: (f32, f32, f32),
+    pub intensity: f32,
+    pub ambient: (f32, f32, f32),
+}
+
+#[derive(Clone, Copy)]
+pub struct MaterialComponent {
+    pub albedo: (f32, f32, f32),
+    pub metallic: f32,
+    pub roughness: f32,
+    pub ambient_occlusion: f32,
+}
+
+pub struct LabelComponent {
+    pub name: String,
+    pub entity_type: String,
+}
+
+pub struct Selected;
+
 #[derive(Default)]
 pub struct EcsWorld {
     next_id: EntityId,
