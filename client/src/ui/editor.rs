@@ -260,7 +260,105 @@ impl EditorState {
                 "edit_scene" => {
                     if let Some(_lighting) = ed.data.get("lighting") {
                     }
-                    if let Some(_materials) = ed.data.get("materials") {
+                    if let Some(materials) = ed.data.get("materials") {
+                        if let Some(mat_map) = materials.as_object() {
+                            for (key, mat_val) in mat_map {
+                                if let Some(id_str) = key.strip_prefix("entity_") {
+                                    if let Ok(target_id) = id_str.parse::<u64>() {
+                                        if let Some(albedo) = mat_val.get("albedo").and_then(|v| v.as_array()) {
+                                            if albedo.len() >= 3 {
+                                                let r = albedo[0].as_f64().unwrap_or(0.8) as f32;
+                                                let g = albedo[1].as_f64().unwrap_or(0.8) as f32;
+                                                let b = albedo[2].as_f64().unwrap_or(0.8) as f32;
+                                                if let Some(mat) = self.scene.world.get_mut::<MaterialComponent>(target_id) {
+                                                    mat.albedo = (r, g, b);
+                                                }
+                                            }
+                                        }
+                                        if let Some(metallic) = mat_val.get("metallic").and_then(|v| v.as_f64()) {
+                                            if let Some(mat) = self.scene.world.get_mut::<MaterialComponent>(target_id) {
+                                                mat.metallic = metallic as f32;
+                                            }
+                                        }
+                                        if let Some(roughness) = mat_val.get("roughness").and_then(|v| v.as_f64()) {
+                                            if let Some(mat) = self.scene.world.get_mut::<MaterialComponent>(target_id) {
+                                                mat.roughness = roughness as f32;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                "create_primitive" => {
+                    let primitive = ed.data.get("primitive").and_then(|v| v.as_str()).unwrap_or("cube");
+                    let pos = ed.data.get("position").and_then(|v| v.as_array()).map(|a| {
+                        (a[0].as_f64().unwrap_or(0.0) as f32,
+                         a[1].as_f64().unwrap_or(0.0) as f32,
+                         a[2].as_f64().unwrap_or(0.0) as f32)
+                    }).unwrap_or((0.0, 0.0, 0.0));
+                    let rot = ed.data.get("rotation").and_then(|v| v.as_array()).map(|a| {
+                        (a[0].as_f64().unwrap_or(0.0) as f32,
+                         a[1].as_f64().unwrap_or(0.0) as f32,
+                         a[2].as_f64().unwrap_or(0.0) as f32)
+                    }).unwrap_or((0.0, 0.0, 0.0));
+                    let scale = ed.data.get("scale").and_then(|v| v.as_array()).map(|a| {
+                        (a[0].as_f64().unwrap_or(1.0) as f32,
+                         a[1].as_f64().unwrap_or(1.0) as f32,
+                         a[2].as_f64().unwrap_or(1.0) as f32)
+                    }).unwrap_or((1.0, 1.0, 1.0));
+
+                    let mesh_type = match primitive {
+                        "sphere" => MeshType::Sphere(16),
+                        "plane" => MeshType::Plane,
+                        "cylinder" => MeshType::Cylinder,
+                        _ => MeshType::Cube,
+                    };
+                    self.scene.world.add(eid, MeshComponent { mesh_data: None, mesh_type: Some(mesh_type) });
+                    if let Some(t) = self.scene.world.get_mut::<TransformComponent>(eid) {
+                        t.position = pos;
+                        t.rotation = rot;
+                        t.scale = scale;
+                    }
+                    let color = ed.data.get("color").and_then(|v| v.as_array())
+                        .or_else(|| ed.data.get("material").and_then(|m| m.get("albedo")).and_then(|v| v.as_array()));
+                    let (cr, cg, cb) = color.map(|c| {
+                        (c[0].as_f64().unwrap_or(0.8) as f32,
+                         c[1].as_f64().unwrap_or(0.8) as f32,
+                         c[2].as_f64().unwrap_or(0.8) as f32)
+                    }).unwrap_or((0.8, 0.8, 0.8));
+                    let metallic = ed.data.get("metallic").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                    let roughness = ed.data.get("roughness").and_then(|v| v.as_f64()).unwrap_or(0.5) as f32;
+                    self.scene.world.add(eid, MaterialComponent {
+                        albedo: (cr, cg, cb),
+                        metallic,
+                        roughness,
+                        ambient_occlusion: 1.0,
+                    });
+                }
+                "assign_material" => {
+                    let target_id = ed.data.get("entity_id").and_then(|v| v.as_u64());
+                    let color = ed.data.get("color").and_then(|v| v.as_array());
+                    if let Some(tid) = target_id {
+                        if let Some(c) = color {
+                            if c.len() >= 3 {
+                                let r = c[0].as_f64().unwrap_or(0.8) as f32;
+                                let g = c[1].as_f64().unwrap_or(0.8) as f32;
+                                let b = c[2].as_f64().unwrap_or(0.8) as f32;
+                                if let Some(mat) = self.scene.world.get_mut::<MaterialComponent>(tid) {
+                                    mat.albedo = (r, g, b);
+                                }
+                                if let Some(mat) = self.scene.world.get_mut::<MaterialComponent>(tid) {
+                                    if let Some(metallic) = ed.data.get("metallic").and_then(|v| v.as_f64()) {
+                                        mat.metallic = metallic as f32;
+                                    }
+                                    if let Some(roughness) = ed.data.get("roughness").and_then(|v| v.as_f64()) {
+                                        mat.roughness = roughness as f32;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 _ => {}

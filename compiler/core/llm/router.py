@@ -5,11 +5,13 @@ import asyncio
 from typing import Any, Dict, List, Optional
 
 from ..scene_manager import SceneManager
-from ..executors.skeleton_executor import SkeletonExecutor
+from ..executors.material_executor import MaterialExecutor
 from ..executors.mesh_executor import MeshExecutor
 from ..executors.motion_executor import MotionExecutor
-from ..executors.texture_executor import TextureExecutor
+from ..executors.primitive_executor import PrimitiveExecutor
 from ..executors.scene_editor import SceneEditor
+from ..executors.skeleton_executor import SkeletonExecutor
+from ..executors.texture_executor import TextureExecutor
 
 
 class LLMClient:
@@ -58,6 +60,8 @@ class LLMRouter:
             "generate_motion": MotionExecutor(),
             "generate_texture": TextureExecutor(),
             "edit_scene": SceneEditor(),
+            "create_primitive": PrimitiveExecutor(),
+            "assign_material": MaterialExecutor(),
         }
 
     def register_ws(self, ws):
@@ -131,5 +135,11 @@ class LLMRouter:
             return "The scene is empty."
         lines = []
         for eid, entity in self.scene.entities.items():
-            lines.append(f"- Entity {eid}: type={entity.entity_type}, label='{entity.label}'")
+            data = entity.data
+            if isinstance(data, dict):
+                pos = data.get("position", data.get("translation", "?"))
+                color = data.get("material", {}).get("albedo", "?") if isinstance(data.get("material"), dict) else "?"
+                lines.append(f"- Entity {eid}: type={entity.entity_type}, label='{entity.label}', pos={pos}, color={color}")
+            else:
+                lines.append(f"- Entity {eid}: type={entity.entity_type}, label='{entity.label}'")
         return "\n".join(lines)

@@ -176,6 +176,51 @@ Rules:
 - materials: PBR parameters, keyed by entity_id
 - clear_scene: if true, remove all current entities before adding new ones
 
+### 6. create_primitive
+
+Creates a basic geometric primitive in the scene with position, rotation, scale, and material.
+
+```json
+{
+  "type": "create_primitive",
+  "params": {
+    "primitive": "cube | sphere | plane | cylinder",
+    "position": [0.0, 0.5, 0.0],
+    "rotation": [0.0, 0.0, 0.0],
+    "scale": [1.0, 1.0, 1.0],
+    "color": [0.8, 0.2, 0.2],
+    "metallic": 0.0,
+    "roughness": 0.5
+  }
+}
+```
+
+Rules:
+- primitive must be one of: cube, sphere, plane, cylinder
+- position, rotation (Euler radians), scale: 3-element arrays
+- color: RGB linear values in 0-1 range
+- This is the simplest way to create objects. Use it for quick scene building.
+
+### 7. assign_material
+
+Changes the material properties of an existing entity.
+
+```json
+{
+  "type": "assign_material",
+  "params": {
+    "entity_id": 5,
+    "color": [1.0, 0.0, 0.0],
+    "metallic": 0.0,
+    "roughness": 0.3
+  }
+}
+```
+
+Rules:
+- entity_id: must reference an existing entity from the scene context
+- Only include fields you want to change
+
 ## Output Format
 
 You MUST output a single JSON object:
