@@ -390,10 +390,17 @@ pub async fn run() {
                         }
 
                         if let Some(clip_val) = editor.motion_clip.as_ref().cloned() {
-                            let clip = parse_motion_clip(&clip_val);
-                            if clip.frame_count() > 0 {
-                                animator.play(clip);
-                                editor.push_log(LogLevel::Ok, "Animation loaded");
+                            match parse_motion_clip(&clip_val) {
+                                Ok(clip) if clip.frame_count() > 0 => {
+                                    animator.play(clip);
+                                    editor.push_log(LogLevel::Ok, "Animation loaded");
+                                }
+                                Ok(_) => {
+                                    editor.push_log(LogLevel::Warn, "Animation has zero frames");
+                                }
+                                Err(e) => {
+                                    editor.push_log(LogLevel::Err, &format!("Failed to load animation: {}", e));
+                                }
                             }
                         }
 
@@ -636,8 +643,9 @@ fn arr4_u32(v: &serde_json::Value) -> [u32; 4] {
     [a[0].as_u64().unwrap_or(0) as u32, a[1].as_u64().unwrap_or(0) as u32, a[2].as_u64().unwrap_or(0) as u32, a[3].as_u64().unwrap_or(0) as u32]
 }
 
-fn parse_motion_clip(val: &serde_json::Value) -> crate::animation::playback::MotionClip {
-    let skeleton: Skeleton = serde_json::from_value(val["skeleton"].clone()).unwrap_or(Skeleton { name: String::new(), joints: Vec::new() });
+fn parse_motion_clip(val: &serde_json::Value) -> Result<crate::animation::playback::MotionClip, String> {
+    let skeleton: Skeleton = serde_json::from_value(val["skeleton"].clone())
+        .map_err(|e| format!("Invalid skeleton in motion clip: {}", e))?;
     let fps = val["fps"].as_f64().unwrap_or(30.0) as f32;
     let loop_ = val["loop"].as_bool().unwrap_or(false);
     let frames: Vec<Vec<Quaternion>> = val["frames"].as_array().map(|fa| {
@@ -658,5 +666,5 @@ fn parse_motion_clip(val: &serde_json::Value) -> crate::animation::playback::Mot
             (a[0].as_f64().unwrap_or(0.0) as f32, a[1].as_f64().unwrap_or(0.0) as f32, a[2].as_f64().unwrap_or(0.0) as f32)
         }).collect()
     }).unwrap_or_default();
-    crate::animation::playback::MotionClip { skeleton, frames, root_positions, fps, loop_ }
+    Ok(crate::animation::playback::MotionClip { skeleton, frames, root_positions, fps, loop_ })
 }

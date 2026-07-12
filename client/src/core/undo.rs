@@ -4,12 +4,14 @@ use crate::core::ecs::{EntityId, MaterialComponent, TransformComponent};
 pub struct TransformSnapshot {
     pub entity: EntityId,
     pub prev: TransformComponent,
+    pub current: TransformComponent,
 }
 
 #[derive(Clone)]
 pub struct MaterialSnapshot {
     pub entity: EntityId,
     pub prev: MaterialComponent,
+    pub current: MaterialComponent,
 }
 
 #[derive(Clone)]

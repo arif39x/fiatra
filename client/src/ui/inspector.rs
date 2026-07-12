@@ -22,7 +22,7 @@ impl Inspector {
                 let mut snapshot_transform: Option<TransformSnapshot> = None;
                 let mut snapshot_material: Option<MaterialSnapshot> = None;
 
-                if let Some(transform) = scene.world.get::<TransformComponent>(entity) {
+                if let Some(transform) = scene.world.get::<TransformComponent>(entity).copied() {
                     let mut pos = [transform.position.0, transform.position.1, transform.position.2];
                     let mut rot = [transform.rotation.0, transform.rotation.1, transform.rotation.2];
                     let mut scale = [transform.scale.0, transform.scale.1, transform.scale.2];
@@ -45,19 +45,20 @@ impl Inspector {
                     });
 
                     if changed {
-                        snapshot_transform = Some(TransformSnapshot {
-                            entity,
-                            prev: *transform,
-                        });
                         if let Some(t) = scene.world.get_mut::<TransformComponent>(entity) {
                             t.position = (pos[0], pos[1], pos[2]);
                             t.rotation = (rot[0], rot[1], rot[2]);
                             t.scale = (scale[0], scale[1], scale[2]);
+                            snapshot_transform = Some(TransformSnapshot {
+                                entity,
+                                prev: transform,
+                                current: *t,
+                            });
                         }
                     }
                 }
 
-                if let Some(material) = scene.world.get::<MaterialComponent>(entity) {
+                if let Some(material) = scene.world.get::<MaterialComponent>(entity).copied() {
                     let mut color = [material.albedo.0, material.albedo.1, material.albedo.2];
                     let mut metallic = material.metallic;
                     let mut roughness = material.roughness;
@@ -66,10 +67,6 @@ impl Inspector {
                     ui.label("Material");
                     if ui.color_edit_button_rgb(&mut color).changed() {
                         changed = true;
-                        snapshot_material = Some(MaterialSnapshot {
-                            entity,
-                            prev: *material,
-                        });
                     }
                     ui.horizontal(|ui| {
                         ui.label("Metallic");
@@ -80,15 +77,22 @@ impl Inspector {
                         changed |= ui.add(egui::Slider::new(&mut roughness, 0.0..=1.0).text("")).changed();
                     });
 
-                    if let Some(snap) = &snapshot_material {
-                        if changed {
-                            if let Some(m) = scene.world.get_mut::<MaterialComponent>(entity) {
-                                m.albedo = (color[0], color[1], color[2]);
-                                m.metallic = metallic;
-                                m.roughness = roughness;
-                            }
-                            undo.push(EditCommand::Material(snap.clone()));
+                    if changed {
+                        if let Some(m) = scene.world.get_mut::<MaterialComponent>(entity) {
+                            let prev = *m;
+                            m.albedo = (color[0], color[1], color[2]);
+                            m.metallic = metallic;
+                            m.roughness = roughness;
+                            snapshot_material = Some(MaterialSnapshot {
+                                entity,
+                                prev,
+                                current: *m,
+                            });
                         }
+                    }
+
+                    if let Some(snap) = snapshot_material {
+                        undo.push(EditCommand::Material(snap));
                     }
                 }
 

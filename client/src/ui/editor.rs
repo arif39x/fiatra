@@ -190,10 +190,19 @@ impl EditorState {
     }
 
     pub fn redo_last(&mut self) {
-        // Re-apply the command (push it back, then push triggers apply on next edit)
-        // For simplicity, we invert the undo
-        if let Some(_cmd) = self.undo.redo() {
-            self.push_log(LogLevel::Info, "Redo: re-apply not yet fully implemented");
+        if let Some(cmd) = self.undo.redo() {
+            match cmd {
+                EditCommand::Transform(snap) => {
+                    if let Some(t) = self.scene.world.get_mut::<TransformComponent>(snap.entity) {
+                        *t = snap.current;
+                    }
+                }
+                EditCommand::Material(snap) => {
+                    if let Some(m) = self.scene.world.get_mut::<MaterialComponent>(snap.entity) {
+                        *m = snap.current;
+                    }
+                }
+            }
         }
     }
 
