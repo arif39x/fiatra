@@ -42,7 +42,8 @@ impl ChatPanel {
     pub fn draw(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::bottom("chat_bottom_panel")
             .frame(Frame::none().fill(BG_CARD))
-            .height_range(200.0..=200.0)
+            .height_range(120.0..=500.0)
+            .resizable(true)
             .show(ctx, |ui| {
                 let max_msg_height = (ui.available_height() - 60.0).max(40.0);
                 ScrollArea::vertical()
@@ -111,15 +112,11 @@ impl ChatPanel {
                     });
                 } else {
                     ui.horizontal(|ui| {
-                        let resp = TextEdit::multiline(&mut self.input)
+                        let text_edit = TextEdit::multiline(&mut self.input)
                             .font(FontId::monospace(13.0))
-                            .desired_width(f32::INFINITY)
                             .desired_rows(2)
                             .hint_text("Describe what to create...")
                             .show(ui);
-
-                        let enter_send = ui.input(|i| i.key_pressed(egui::Key::Enter))
-                            && !ui.input(|i| i.modifiers.shift);
 
                         let send_clicked = ui
                             .add_sized(
@@ -132,6 +129,9 @@ impl ChatPanel {
                                 .fill(ACCENT_STRONG),
                             )
                             .clicked();
+
+                        let enter_send = ui.input(|i| i.key_pressed(egui::Key::Enter))
+                            && !ui.input(|i| i.modifiers.shift);
 
                         if send_clicked || enter_send {
                             self.send_message();

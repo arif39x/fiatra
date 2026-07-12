@@ -8,12 +8,13 @@ use crate::ui::inspector::Inspector;
 use crate::ui::scene_panel::ScenePanel;
 use crate::ui::style::*;
 use crate::ui::toolbar::Toolbar;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 
 use egui::{
-    Align, CentralPanel, Color32, Context, FontId, Frame, Layout, Margin, RichText,
-    ScrollArea, SidePanel, Stroke,
+    Align, CentralPanel, CollapsingHeader, Color32, Context, FontId, Frame, Layout, Margin,
+    RichText, ScrollArea, SidePanel, Stroke,
 };
 
 #[derive(Clone)]
@@ -56,6 +57,7 @@ pub struct EditorState {
     pub export_path: String,
     pub export_triggered: bool,
     pub scene_sync_pending: bool,
+    pub ws_connected: Arc<AtomicBool>,
 }
 
 impl EditorState {
@@ -85,6 +87,7 @@ impl EditorState {
             export_path: "output/character.glb".to_string(),
             export_triggered: false,
             scene_sync_pending: false,
+            ws_connected: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -106,12 +109,19 @@ impl EditorState {
         Self::setup_style(ctx);
 
         egui::TopBottomPanel::top("top_bar")
-            .frame(Frame::none().fill(BG_CARD).inner_margin(Margin::symmetric(16.0, 0.0)))
-            .height_range(44.0..=44.0)
+            .frame(Frame::none().fill(BG_CARD).inner_margin(Margin::symmetric(16.0, 4.0)))
+            .min_height(32.0)
             .show(ctx, |ui| {
                 ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                     ui.label(RichText::new("initial").strong().size(14.0).color(Color32::WHITE));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        let connected = self.ws_connected.load(Ordering::Relaxed);
+                        let (dot_color, dot_text) = if connected {
+                            (GREEN, "●")
+                        } else {
+                            (RED, "✕")
+                        };
+                        ui.label(RichText::new(dot_text).font(FontId::monospace(13.0)).color(dot_color));
                         let fps_color = if self.metrics.fps > 30.0 { GREEN } else if self.metrics.fps > 15.0 { YELLOW } else { RED };
                         ui.label(RichText::new(format!("{:.0} FPS", self.metrics.fps)).font(FontId::monospace(11.0)).color(fps_color));
                     });
@@ -122,36 +132,35 @@ impl EditorState {
 
         SidePanel::right("right_panel")
             .frame(Frame::none().fill(BG_SIDEBAR).inner_margin(Margin::ZERO))
-            .default_width(280.0)
-            .min_width(280.0)
+            .default_width(220.0)
+            .min_width(140.0)
+            .resizable(true)
             .show(ctx, |ui| {
-                Frame::none()
-                    .fill(BG_CARD)
-                    .inner_margin(Margin::symmetric(12.0, 8.0))
+                CollapsingHeader::new("Log Infos")
+                    .default_open(true)
                     .show(ui, |ui| {
-                        ui.label(RichText::new("Log Infos").strong().size(13.0).color(TEXT));
+                        ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
+                            ui.style_mut().spacing.item_spacing.y = 0.0;
+                            for log in &self.logs {
+                                let (tag, color, bg) = match log.level {
+                                    LogLevel::Ok => ("OK", GREEN, GREEN.gamma_multiply(0.08)),
+                                    LogLevel::Info => ("INFO", ACCENT, ACCENT.gamma_multiply(0.08)),
+                                    LogLevel::Warn => ("WARN", YELLOW, YELLOW.gamma_multiply(0.08)),
+                                    LogLevel::Err => ("ERR", RED, RED.gamma_multiply(0.08)),
+                                };
+                                Frame::none()
+                                    .fill(bg)
+                                    .inner_margin(Margin::symmetric(8.0, 4.0))
+                                    .show(ui, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.label(RichText::new(&log.timestamp).font(FontId::monospace(9.0)).color(TEXT_MUTED));
+                                            ui.label(RichText::new(tag).font(FontId::monospace(9.0)).color(color));
+                                        });
+                                        ui.label(RichText::new(&log.message).font(FontId::monospace(11.0)).color(TEXT));
+                                    });
+                            }
+                        });
                     });
-                ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
-                    ui.style_mut().spacing.item_spacing.y = 0.0;
-                    for log in &self.logs {
-                        let (tag, color, bg) = match log.level {
-                            LogLevel::Ok => ("OK", GREEN, GREEN.gamma_multiply(0.08)),
-                            LogLevel::Info => ("INFO", ACCENT, ACCENT.gamma_multiply(0.08)),
-                            LogLevel::Warn => ("WARN", YELLOW, YELLOW.gamma_multiply(0.08)),
-                            LogLevel::Err => ("ERR", RED, RED.gamma_multiply(0.08)),
-                        };
-                        Frame::none()
-                            .fill(bg)
-                            .inner_margin(Margin::symmetric(8.0, 4.0))
-                            .show(ui, |ui| {
-                                ui.horizontal(|ui| {
-                                    ui.label(RichText::new(&log.timestamp).font(FontId::monospace(9.0)).color(TEXT_MUTED));
-                                    ui.label(RichText::new(tag).font(FontId::monospace(9.0)).color(color));
-                                });
-                                ui.label(RichText::new(&log.message).font(FontId::monospace(11.0)).color(TEXT));
-                            });
-                    }
-                });
             });
 
         CentralPanel::default()
@@ -168,6 +177,18 @@ impl EditorState {
             self.chat.send_quick_command(&cmd);
         }
 
+        self.gen_status.on_cancel = {
+            let ws_tx = self.ws_tx.clone();
+            Some(Box::new(move |job_id: String| {
+                if let Some(tx) = ws_tx.lock().unwrap().as_ref() {
+                    let msg = serde_json::json!({
+                        "type": "cancel_job",
+                        "job_id": job_id,
+                    });
+                    let _ = tx.send(msg.to_string());
+                }
+            }))
+        };
         self.gen_status.draw(ctx);
         self.draw_export(ctx);
     }

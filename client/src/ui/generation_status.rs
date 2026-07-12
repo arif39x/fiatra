@@ -21,6 +21,7 @@ pub struct GenerationJob {
 pub struct GenerationStatusPanel {
     pub jobs: HashMap<String, GenerationJob>,
     pub show_panel: bool,
+    pub on_cancel: Option<Box<dyn FnMut(String) + Send>>,
 }
 
 impl GenerationStatusPanel {
@@ -28,6 +29,7 @@ impl GenerationStatusPanel {
         Self {
             jobs: HashMap::new(),
             show_panel: true,
+            on_cancel: None,
         }
     }
 
@@ -87,7 +89,16 @@ impl GenerationStatusPanel {
                 }
                 for job in self.jobs.values() {
                     ui.group(|ui| {
-                        ui.label(format!("[{}] {}", job.job_type, job.id));
+                        ui.horizontal(|ui| {
+                            ui.label(format!("[{}] {}", job.job_type, job.id));
+                            if matches!(job.status, JobStatus::Queued | JobStatus::Running) {
+                                if ui.button("Cancel").clicked() {
+                                    if let Some(ref mut cb) = self.on_cancel {
+                                        cb(job.id.clone());
+                                    }
+                                }
+                            }
+                        });
                         match &job.status {
                             JobStatus::Queued => {
                                 ui.label("Queued...");

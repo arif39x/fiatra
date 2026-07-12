@@ -100,6 +100,7 @@ pub async fn run() {
 
     let state_queue = Arc::new(Mutex::new(Vec::<ServerMessage>::new()));
     let state_queue_clone = state_queue.clone();
+    let ws_connected = editor.ws_connected.clone();
 
     let mut skin_renderer = SkinRenderer::new(&device, &queue, &config);
     let mut static_renderer = StaticRenderer::new(&device, &queue, &config);
@@ -151,6 +152,7 @@ pub async fn run() {
             loop {
                 match connect_async("ws://127.0.0.1:8081/ws").await {
                     Ok((ws_stream, _)) => {
+                        ws_connected.store(true, std::sync::atomic::Ordering::Relaxed);
                         {
                             let mut guard = log_queue_clone.lock().expect("log queue lock poisoned");
                             guard.push((LogLevel::Info, "[WS] connected".to_string()));
@@ -201,6 +203,7 @@ pub async fn run() {
                             _ = read_task => {},
                             _ = write_task => {},
                         }
+                        ws_connected.store(false, std::sync::atomic::Ordering::Relaxed);
                     }
                     Err(e) => {
                         {
