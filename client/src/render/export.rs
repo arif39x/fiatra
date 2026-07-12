@@ -336,21 +336,7 @@ pub fn export_fbx(params: &ExportParams) -> Result<(), String> {
 
     fbx_node_header(&mut fbx, "Objects", &[]);
 
-    for i in 0..n {
-        let v = &vertices[i];
-        let p = &v["position"];
-        fbx.push_str(&format!(
-            "\tGeometry:: {}, \"MeshVertex-{}\", \"\" {{\n",
-            i, i
-        ));
-        fbx.push_str(&format!("\t\tType: \"Mesh\"\n"));
-        fbx.push_str(&format!("\t\tVertices: *{} {{\n", 3));
-        fbx.push_str(&format!("\t\t\ta: {},{},{}\n", p[0], p[1], p[2]));
-        fbx.push_str(&format!("\t\t}}\n"));
-        fbx.push_str(&format!("\t}}\n"));
-    }
-
-    fbx.push_str(&format!(" Geometry:: {}, \"MeshShape\", \"\" {{\n", n));
+    fbx.push_str(" Geometry:: 0, \"MeshShape\", \"\" {\n");
     fbx.push_str("\tType: \"Mesh\"\n");
 
     fbx.push_str(&format!("\tVertices: *{} {{\n", n * 3));
