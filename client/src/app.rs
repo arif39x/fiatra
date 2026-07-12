@@ -524,10 +524,10 @@ pub async fn run() {
                                     MeshType::Cylinder => create_cube(),
                                     MeshType::Custom => continue,
                                 };
-                                static_renderer.add_mesh(&device, verts, idxs, world_mat, [albedo.0, albedo.1, albedo.2], metallic, roughness);
+                                static_renderer.add_mesh(&device, &queue, verts, idxs, world_mat, [albedo.0, albedo.1, albedo.2], metallic, roughness);
                             }
                             for (giz_verts, giz_idxs, giz_mat, giz_col, giz_met, giz_rough) in collect_gizmo_data(&editor.scene) {
-                                static_renderer.add_mesh(&device, giz_verts, giz_idxs, giz_mat, giz_col, giz_met, giz_rough);
+                                static_renderer.add_mesh(&device, &queue, giz_verts, giz_idxs, giz_mat, giz_col, giz_met, giz_rough);
                             }
                             static_renderer.update_camera(&queue, &camera);
                             static_renderer.draw(&mut rpass);

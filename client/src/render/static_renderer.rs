@@ -39,6 +39,8 @@ pub struct StaticMeshGpu {
     vertex_buf: wgpu::Buffer,
     index_buf: wgpu::Buffer,
     index_count: u32,
+    model_buf: wgpu::Buffer,
+    material_buf: wgpu::Buffer,
     bind_group_0: wgpu::BindGroup,
 }
 
@@ -49,6 +51,7 @@ pub struct StaticRenderer {
     bind_group_layout_0: wgpu::BindGroupLayout,
     bind_group_1: wgpu::BindGroup,
     meshes: Vec<StaticMeshGpu>,
+    pool: Vec<StaticMeshGpu>,
 }
 
 impl StaticRenderer {
@@ -199,12 +202,14 @@ impl StaticRenderer {
             bind_group_layout_0,
             bind_group_1,
             meshes: Vec::new(),
+            pool: Vec::new(),
         }
     }
 
     pub fn add_mesh(
         &mut self,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         vertices: Vec<StaticVertex>,
         indices: Vec<u32>,
         model_matrix: [f32; 16],
@@ -212,6 +217,24 @@ impl StaticRenderer {
         metallic: f32,
         roughness: f32,
     ) {
+        let material = MaterialRaw {
+            albedo: [albedo[0], albedo[1], albedo[2], 1.0],
+            metallic,
+            roughness,
+            ambient_occlusion: 1.0,
+            _padding: 0.0,
+        };
+
+        if let Some(mut entry) = self.pool.pop() {
+            queue.write_buffer(&entry.model_buf, 0, bytemuck::bytes_of(&model_matrix));
+            queue.write_buffer(&entry.material_buf, 0, bytemuck::bytes_of(&material));
+            if entry.index_count == indices.len() as u32 {
+                entry.index_count = indices.len() as u32;
+                self.meshes.push(entry);
+                return;
+            }
+        }
+
         let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("static_mesh_vertex"),
             contents: bytemuck::cast_slice(&vertices),
@@ -229,13 +252,6 @@ impl StaticRenderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let material = MaterialRaw {
-            albedo: [albedo[0], albedo[1], albedo[2], 1.0],
-            metallic,
-            roughness,
-            ambient_occlusion: 1.0,
-            _padding: 0.0,
-        };
         let material_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("static_mat"),
             contents: bytemuck::bytes_of(&material),
@@ -255,6 +271,8 @@ impl StaticRenderer {
             vertex_buf,
             index_buf,
             index_count: indices.len() as u32,
+            model_buf,
+            material_buf,
             bind_group_0,
         });
     }
@@ -269,7 +287,7 @@ impl StaticRenderer {
     }
 
     pub fn clear(&mut self) {
-        self.meshes.clear();
+        self.pool.append(&mut self.meshes);
     }
 
     pub fn draw<'a>(&'a self, rpass: &mut wgpu::RenderPass<'a>) {
