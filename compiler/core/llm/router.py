@@ -53,6 +53,7 @@ class LLMRouter:
         self.llm = LLMClient(llm_endpoint)
         self.scene = SceneManager()
         self.active_ws: List[Any] = []
+        self.message_history: List[dict] = []
 
         self.executors = {
             "generate_skeleton": SkeletonExecutor(),
@@ -75,12 +76,14 @@ class LLMRouter:
                 self.active_ws.remove(ws)
 
     async def process(self, request: dict) -> dict:
-        messages = request.get("messages", [])
+        user_message = request.get("user_message", "")
+        if user_message:
+            self.message_history.append({"role": "user", "content": user_message})
 
         scene_context = self._format_scene_context()
         full_system = self.system_prompt.replace("{scene_context}", scene_context)
 
-        llm_output = await self.llm.chat(full_system, messages)
+        llm_output = await self.llm.chat(full_system, self.message_history)
 
         reply = llm_output.get("reply", "")
         actions = llm_output.get("actions", [])
@@ -123,6 +126,8 @@ class LLMRouter:
                 "progress": 1.0,
                 "entity": entity.to_dict(),
             })
+
+        self.message_history.append({"role": "assistant", "content": reply})
 
         return {
             "reply": reply,

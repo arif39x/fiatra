@@ -153,20 +153,7 @@ impl ChatPanel {
             entity_ids: vec![],
         });
 
-        let chat_messages: Vec<serde_json::Value> = self
-            .messages
-            .iter()
-            .map(|m| {
-                let role = match m.role {
-                    MessageRole::User => "user",
-                    MessageRole::Assistant => "assistant",
-                    MessageRole::System => "system",
-                };
-                serde_json::json!({"role": role, "content": m.text})
-            })
-            .collect();
-
-        self.pending_send = Some(serde_json::to_string(&chat_messages).unwrap_or_default());
+        self.pending_send = Some(input);
         self.processing = true;
         self.input.clear();
     }
@@ -178,20 +165,7 @@ impl ChatPanel {
             entity_ids: vec![],
         });
 
-        let chat_messages: Vec<serde_json::Value> = self
-            .messages
-            .iter()
-            .map(|m| {
-                let role = match m.role {
-                    MessageRole::User => "user",
-                    MessageRole::Assistant => "assistant",
-                    MessageRole::System => "system",
-                };
-                serde_json::json!({"role": role, "content": m.text})
-            })
-            .collect();
-
-        self.pending_send = Some(serde_json::to_string(&chat_messages).unwrap_or_default());
+        self.pending_send = Some(command.to_string());
         self.processing = true;
     }
 

@@ -410,7 +410,7 @@ pub async fn run() {
                         egui_winit.egui_ctx().begin_frame(input);
                         editor.draw(egui_winit.egui_ctx());
 
-                        if let Some(msg_json) = editor.chat.pending_send.take() {
+                        if let Some(user_msg) = editor.chat.pending_send.take() {
                             if let Some(tx) = editor.ws_tx.lock().unwrap().as_ref() {
                                 let mut scene_entities = Vec::new();
                                 let transform_data: Vec<(u64, (f32, f32, f32), (f32, f32, f32), (f32, f32, f32))> = {
@@ -436,7 +436,7 @@ pub async fn run() {
                                 }
                                 let _ = tx.send(serde_json::json!({
                                     "type": "chat",
-                                    "messages": serde_json::from_str::<serde_json::Value>(&msg_json).unwrap(),
+                                    "user_message": user_msg,
                                     "scene_state": scene_entities,
                                 }).to_string());
                             }
