@@ -115,10 +115,61 @@ def _make_sphere(
     return verts, idxs
 
 
+def _primitive_from_prompt(prompt: str) -> dict | None:
+    prompt_lower = prompt.lower()
+
+    def _box(w, h, d):
+        hw, hh, hd = w / 2, h / 2, d / 2
+        verts = [
+            {"position": [-hw, -hh, -hd], "normal": [0, 0, -1], "uv": [0, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw, -hh, -hd], "normal": [0, 0, -1], "uv": [1, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw,  hh, -hd], "normal": [0, 0, -1], "uv": [1, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw,  hh, -hd], "normal": [0, 0, -1], "uv": [0, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw, -hh,  hd], "normal": [0, 0, 1],  "uv": [0, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw, -hh,  hd], "normal": [0, 0, 1],  "uv": [1, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw,  hh,  hd], "normal": [0, 0, 1],  "uv": [1, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw,  hh,  hd], "normal": [0, 0, 1],  "uv": [0, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw, -hh, -hd], "normal": [0, -1, 0], "uv": [0, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw, -hh, -hd], "normal": [0, -1, 0], "uv": [1, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw, -hh,  hd], "normal": [0, -1, 0], "uv": [1, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw, -hh,  hd], "normal": [0, -1, 0], "uv": [0, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw,  hh, -hd], "normal": [0, 1, 0],  "uv": [0, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw,  hh, -hd], "normal": [0, 1, 0],  "uv": [1, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw,  hh,  hd], "normal": [0, 1, 0],  "uv": [1, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw,  hh,  hd], "normal": [0, 1, 0],  "uv": [0, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw, -hh, -hd], "normal": [-1, 0, 0], "uv": [0, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw, -hh,  hd], "normal": [-1, 0, 0], "uv": [1, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw,  hh,  hd], "normal": [-1, 0, 0], "uv": [1, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [-hw,  hh, -hd], "normal": [-1, 0, 0], "uv": [0, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw, -hh, -hd], "normal": [1, 0, 0],  "uv": [0, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw, -hh,  hd], "normal": [1, 0, 0],  "uv": [1, 0], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw,  hh,  hd], "normal": [1, 0, 0],  "uv": [1, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+            {"position": [ hw,  hh, -hd], "normal": [1, 0, 0],  "uv": [0, 1], "bone_weights": [1, 0, 0, 0], "bone_indices": [0, 0, 0, 0]},
+        ]
+        faces = [0,1,2, 0,2,3, 4,6,5, 4,7,6, 8,10,9, 8,11,10, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,23,22, 20,22,21]
+        return verts, faces
+
+    if "sphere" in prompt_lower or "ball" in prompt_lower or "orb" in prompt_lower:
+        return {"vertices": _make_sphere((0, 0, 0), 0.5, 0)[0], "indices": _make_sphere((0, 0, 0), 0.5, 0)[1]}
+    if "cube" in prompt_lower or "box" in prompt_lower or "block" in prompt_lower:
+        v, i = _box(1.0, 1.0, 1.0)
+        return {"vertices": v, "indices": i}
+    if "plane" in prompt_lower or "flat" in prompt_lower or "ground" in prompt_lower or "floor" in prompt_lower:
+        v, i = _box(2.0, 0.05, 2.0)
+        return {"vertices": v, "indices": i}
+    if "humanoid" in prompt_lower or "human" in prompt_lower or "character" in prompt_lower or "person" in prompt_lower:
+        return None
+    return None
+
+
 def generate_mesh(
     prompt: str,
     seed: Optional[int] = None,
 ) -> Tuple[dict, dict]:
+    primitive = _primitive_from_prompt(prompt)
+    if primitive is not None:
+        return primitive, {}
+
     skeleton = _load_skeleton()
     wp = _world_positions(skeleton)
     names = [j.name.lower() for j in skeleton.joints]
