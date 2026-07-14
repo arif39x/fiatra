@@ -20,7 +20,6 @@ use crate::ui::style::*;
 #[derive(PartialEq)]
 enum BottomTab {
     Console,
-    Ai,
     Jobs,
 }
 
@@ -127,17 +126,17 @@ impl EditorState {
                             .show(ui, |ui| {
                                 ui.label(RichText::new(label).size(11.0).color(if active { TEXT } else { TEXT_DIM }));
                             }).response;
-                        if r.clicked() { self.bottom_tab = id; }
+                        if ui.interact(r.rect, ui.auto_id_with(label), egui::Sense::click()).clicked() {
+                            self.bottom_tab = id;
+                        }
                     };
                     tab(ui, "Console", BottomTab::Console);
-                    tab(ui, "AI Assistant", BottomTab::Ai);
                     tab(ui, "Jobs", BottomTab::Jobs);
                 });
                 ui.separator();
 
                 match self.bottom_tab {
                     BottomTab::Console => self.console.draw(ui),
-                    BottomTab::Ai => self.chat.draw(ui),
                     BottomTab::Jobs => self.gen_status.draw(ui),
                 }
             });
@@ -155,10 +154,12 @@ impl EditorState {
 
         SidePanel::right("inspector_panel")
             .resizable(true)
-            .default_width(240.0)
-            .min_width(180.0)
+            .default_width(320.0)
+            .min_width(240.0)
             .frame(Frame::none().fill(BG_PANEL))
             .show(ctx, |ui| {
+                self.chat.draw(ui);
+                ui.separator();
                 self.inspector_panel.draw(ui, &mut self.scene, self.selected_entity, &mut self.undo);
             });
 
