@@ -5,7 +5,7 @@ import math
 import os
 from typing import Any, Dict, Optional, Tuple
 
-from ..animation.skeleton import Skeleton
+from ...animation.skeleton import Skeleton
 
 
 def _load_skeleton() -> Skeleton:

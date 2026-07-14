@@ -5,9 +5,9 @@ import math
 import os
 from typing import Optional, Set
 
-from ..animation.math import Quaternion
-from ..animation.motion import MotionClip
-from ..animation.skeleton import Skeleton
+from ...animation.math import Quaternion
+from ...animation.motion import MotionClip
+from ...animation.skeleton import Skeleton
 
 
 def _load_skeleton() -> Skeleton:

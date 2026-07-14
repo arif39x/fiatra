@@ -1,6 +1,4 @@
-use egui::{
-    Align, Color32, FontId, Frame, Layout, Margin, RichText, ScrollArea, TextEdit,
-};
+use egui::{Frame, Margin, Rounding, RichText, ScrollArea, vec2, TextEdit, Layout, Align};
 
 use crate::ui::style::*;
 
@@ -39,142 +37,95 @@ impl ChatPanel {
         }
     }
 
-    pub fn draw(&mut self, ctx: &egui::Context) {
-        egui::TopBottomPanel::bottom("chat_bottom_panel")
-            .frame(Frame::none().fill(BG_CARD))
-            .height_range(120.0..=500.0)
-            .resizable(true)
-            .show(ctx, |ui| {
-                let max_msg_height = (ui.available_height() - 60.0).max(40.0);
-                ScrollArea::vertical()
-                    .id_source("chat_messages")
-                    .stick_to_bottom(true)
-                    .max_height(max_msg_height)
-                    .show(ui, |ui| {
-                        ui.style_mut().spacing.item_spacing.y = 4.0;
-                        for msg in &self.messages {
-                            match msg.role {
-                                MessageRole::User => {
-                                    Frame::none()
-                                        .fill(ACCENT_STRONG.gamma_multiply(0.15))
-                                        .rounding(egui::Rounding::same(6.0))
-                                        .inner_margin(Margin::symmetric(8.0, 6.0))
-                                        .show(ui, |ui| {
-                                            ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
-                                                ui.label(
-                                                    RichText::new(&msg.text)
-                                                        .font(FontId::monospace(12.0))
-                                                        .color(TEXT),
-                                                );
-                                            });
-                                        });
-                                }
-                                MessageRole::Assistant => {
-                                    Frame::none()
-                                        .fill(BG_SIDEBAR)
-                                        .rounding(egui::Rounding::same(6.0))
-                                        .inner_margin(Margin::symmetric(8.0, 6.0))
-                                        .show(ui, |ui| {
-                                            ui.label(
-                                                RichText::new(&msg.text)
-                                                    .font(FontId::monospace(12.0))
-                                                    .color(TEXT),
-                                            );
-                                            if !msg.entity_ids.is_empty() {
-                                                ui.horizontal_wrapped(|ui| {
-                                                    for eid in &msg.entity_ids {
-                                                        ui.label(
-                                                            RichText::new(format!("#{}", eid))
-                                                                .font(FontId::monospace(10.0))
-                                                                .color(ACCENT),
-                                                        );
-                                                    }
-                                                });
+    pub fn draw(&mut self, ui: &mut egui::Ui) {
+        ui.label(RichText::new("AI Assistant").size(12.0).color(TEXT));
+        ui.add_space(4.0);
+
+        ScrollArea::vertical()
+            .stick_to_bottom(true)
+            .show(ui, |ui| {
+                ui.style_mut().spacing.item_spacing = vec2(0.0, 4.0);
+                for msg in &self.messages {
+                    match msg.role {
+                        MessageRole::User => {
+                            Frame::none()
+                                .fill(ACCENT.linear_multiply(0.12))
+                                .rounding(Rounding::same(6.0))
+                                .inner_margin(Margin::symmetric(10.0, 6.0))
+                                .show(ui, |ui| {
+                                    ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
+                                        ui.label(RichText::new(&msg.text).size(12.0).color(TEXT));
+                                    });
+                                });
+                        }
+                        MessageRole::Assistant => {
+                            Frame::none()
+                                .fill(BG_CARD)
+                                .rounding(Rounding::same(6.0))
+                                .inner_margin(Margin::symmetric(10.0, 6.0))
+                                .show(ui, |ui| {
+                                    ui.label(RichText::new(&msg.text).size(12.0).color(TEXT_DIM));
+                                    if !msg.entity_ids.is_empty() {
+                                        ui.horizontal_wrapped(|ui| {
+                                            for eid in &msg.entity_ids {
+                                                ui.label(RichText::new(format!("#{}", eid)).size(10.0).color(ACCENT));
                                             }
                                         });
-                                }
-                                MessageRole::System => {
-                                    ui.horizontal_centered(|ui| {
-                                        ui.colored_label(TEXT_MUTED, &msg.text);
-                                    });
-                                }
-                            }
+                                    }
+                                });
                         }
-                    });
-
-                if self.processing {
-                    ui.horizontal_centered(|ui| {
-                        ui.label(
-                            RichText::new("Processing...")
-                                .font(FontId::monospace(11.0))
-                                .color(TEXT_MUTED),
-                        );
-                    });
-                } else {
-                    ui.horizontal(|ui| {
-                        let text_edit = TextEdit::multiline(&mut self.input)
-                            .font(FontId::monospace(13.0))
-                            .desired_rows(2)
-                            .hint_text("Describe what to create...")
-                            .show(ui);
-
-                        let send_clicked = ui
-                            .add_sized(
-                                [72.0, 48.0],
-                                egui::Button::new(
-                                    RichText::new("Send")
-                                        .font(FontId::monospace(12.0))
-                                        .color(Color32::WHITE),
-                                )
-                                .fill(ACCENT_STRONG),
-                            )
-                            .clicked();
-
-                        let enter_send = ui.input(|i| i.key_pressed(egui::Key::Enter))
-                            && !ui.input(|i| i.modifiers.shift);
-
-                        if send_clicked || enter_send {
-                            self.send_message();
+                        MessageRole::System => {
+                            ui.horizontal_centered(|ui| {
+                                ui.colored_label(TEXT_MUTED, &msg.text);
+                            });
                         }
-                    });
+                    }
                 }
             });
+
+        ui.add_space(4.0);
+        if self.processing {
+            ui.horizontal_centered(|ui| {
+                ui.label(RichText::new("Processing...").size(11.0).color(TEXT_MUTED));
+            });
+        } else {
+            ui.horizontal(|ui| {
+                TextEdit::multiline(&mut self.input)
+                    .desired_rows(1)
+                    .hint_text("Describe what to create...")
+                    .show(ui);
+                let send = ui.add_sized(
+                    [60.0, 32.0],
+                    egui::Button::new(RichText::new("Send").size(11.0).color(TEXT))
+                        .fill(ACCENT)
+                        .rounding(Rounding::same(4.0)),
+                ).clicked();
+                let enter = ui.input(|i| i.key_pressed(egui::Key::Enter))
+                    && !ui.input(|i| i.modifiers.shift);
+                if send || enter {
+                    self.send_message();
+                }
+            });
+        }
     }
 
     fn send_message(&mut self) {
         let input = self.input.trim().to_string();
-        if input.is_empty() {
-            return;
-        }
-
-        self.messages.push(ChatMessage {
-            role: MessageRole::User,
-            text: input.clone(),
-            entity_ids: vec![],
-        });
-
+        if input.is_empty() { return; }
+        self.messages.push(ChatMessage { role: MessageRole::User, text: input.clone(), entity_ids: vec![] });
         self.pending_send = Some(input);
         self.processing = true;
         self.input.clear();
     }
 
     pub fn send_quick_command(&mut self, command: &str) {
-        self.messages.push(ChatMessage {
-            role: MessageRole::User,
-            text: command.to_string(),
-            entity_ids: vec![],
-        });
-
+        self.messages.push(ChatMessage { role: MessageRole::User, text: command.to_string(), entity_ids: vec![] });
         self.pending_send = Some(command.to_string());
         self.processing = true;
     }
 
     pub fn receive_response(&mut self, reply: &str, entity_ids: &[u64]) {
-        self.messages.push(ChatMessage {
-            role: MessageRole::Assistant,
-            text: reply.to_string(),
-            entity_ids: entity_ids.to_vec(),
-        });
+        self.messages.push(ChatMessage { role: MessageRole::Assistant, text: reply.to_string(), entity_ids: entity_ids.to_vec() });
         self.processing = false;
     }
 }

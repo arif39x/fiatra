@@ -1,5 +1,6 @@
 pub mod panels;
 mod editor;
-mod style;
+pub mod style;
 
-pub use editor::{EditorState, LogLevel};
+pub use editor::EditorState;
+pub use panels::console::LogLevel;

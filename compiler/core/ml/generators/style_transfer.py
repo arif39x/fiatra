@@ -4,8 +4,8 @@ import math
 import random
 from typing import Optional
 
-from ..animation.math import Quaternion
-from ..animation.motion import MotionClip
+from ...animation.math import Quaternion
+from ...animation.motion import MotionClip
 
 
 def _apply_presets(

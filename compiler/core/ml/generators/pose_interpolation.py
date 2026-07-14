@@ -3,9 +3,9 @@ from __future__ import annotations
 import math
 from typing import List, Optional
 
-from ..animation.math import Quaternion
-from ..animation.motion import MotionClip
-from ..animation.skeleton import Pose, Skeleton
+from ...animation.math import Quaternion
+from ...animation.motion import MotionClip
+from ...animation.skeleton import Pose, Skeleton
 
 
 def procedural_interpolate(

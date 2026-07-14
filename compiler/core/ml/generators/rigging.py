@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-from ..animation.math import Quaternion
-from ..animation.skeleton import Joint, Skeleton, Transform
+from ...animation.math import Quaternion
+from ...animation.skeleton import Joint, Skeleton, Transform
 
 
 def auto_rig(mesh_data: Dict[str, Any]) -> Skeleton:

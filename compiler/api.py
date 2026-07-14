@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
@@ -17,6 +17,10 @@ from core.ml.generators.style_transfer import apply_style_transfer
 from core.ml.generators.text_to_mesh import generate_mesh
 from core.ml.generators.text_to_motion import generate_motion
 from core.websocket.handlers import LLMRouter
+
+class JobRequest(BaseModel):
+    job_type: str
+    params: Dict[str, Any]
 
 app = FastAPI()
 
